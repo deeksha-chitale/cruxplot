@@ -1,0 +1,2761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cruxplot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Faculty+Glyphic&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mathlive@0.100.0/dist/mathlive.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --wine:#5c3c92;--gold:#077b8a;--coral:#d72631;--cream:#ffffff;
+  --text:#3a3a40;--sidebar-w:clamp(160px,20vw,240px);
+}
+html,body{height:100%;font-family:'Prompt',sans-serif;background:var(--wine);color:var(--text);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+header{
+  display:flex;align-items:center;gap:12px;padding:0 20px;
+  height:64px;background:var(--wine);flex-shrink:0
+}
+header .logo{height:40px;width:auto;display:block}
+header .tagline{color:var(--white);font-size:0.8rem;margin-top:2px}
+main{display:flex;flex:1;overflow:hidden}
+
+/*  Sidebars  */
+.sidebar{
+  width:var(--sidebar-w);background:var(--cream);display:flex;
+  flex-direction:column;overflow-y:auto;overflow-x:hidden;flex-shrink:0
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(92,60,146,0.3);border-radius:2px}
+.sb-section{padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.1)}
+.sb-section h3{
+  font-size:0.65rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:0.1em;color:var(--wine);margin-bottom:10px
+}
+.ctrl-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;min-width:0}
+.ctrl-row label{font-size:0.76rem;min-width:68px;color:#555;flex-shrink:0}
+.ctrl-row input[type=text]{
+  flex:1;min-width:0;box-sizing:border-box;padding:3px 7px;border:1px solid #ccc;border-radius:4px;
+  font-size:0.78rem;font-family:inherit;background:#fff
+}
+.ctrl-row input[type=text]:focus{outline:none;border-color:var(--wine)}
+.ctrl-row input[type=color]{
+  width:34px;height:26px;border:1px solid #ccc;border-radius:4px;
+  cursor:pointer;padding:1px;background:#fff
+}
+.ctrl-row input[type=number]{
+  width:58px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;
+  font-size:0.78rem;font-family:inherit
+}
+.ctrl-row input[type=checkbox]{accent-color:var(--wine);cursor:pointer;width:15px;height:15px}
+.range-wrap{display:flex;align-items:center;gap:5px;flex:1}
+.range-wrap input[type=range]{flex:1;accent-color:var(--wine);cursor:pointer}
+.range-val{font-size:0.72rem;color:#888;min-width:28px;text-align:right}
+.no-sel{font-size:0.78rem;color:#999;text-align:center;padding:18px 12px;font-style:italic}
+.eq-input{
+  display:block;width:100%;padding:8px 9px;border:1px solid #ccc;border-radius:5px;
+  font-size:0.8rem;background:#fff;box-sizing:border-box;
+  --smart-fence-color:var(--wine);
+}
+.eq-input:focus,.eq-input:focus-within{outline:none;border-color:var(--wine)}
+.eq-input::part(virtual-keyboard-toggle),.eq-input::part(menu-toggle){display:none}
+.side-btn{
+  display:block;width:100%;padding:7px 10px;margin-top:6px;
+  background:var(--wine);color:var(--cream);border:none;border-radius:6px;
+  font-family:'Prompt',sans-serif;font-size:0.78rem;cursor:pointer;text-align:left;
+  transition:background 0.15s
+}
+.side-btn:hover{background:var(--coral)}
+.side-btn small{display:block;font-size:0.68rem;opacity:0.65;margin-top:1px}
+.tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.tpl-btn{font-family:'Montserrat',sans-serif;font-weight:600;font-size:0.72rem;letter-spacing:0.01em;padding:8px 6px;margin-top:0;text-align:center;line-height:1.25}
+.hint-text{font-size:0.73rem;color:#666;line-height:2;margin-top:2px}
+.hint-text b{color:var(--wine)}
+.shortcut-row{display:flex;align-items:center;gap:5px;margin-top:10px;flex-wrap:wrap}
+.shortcut-row span{white-space:nowrap;font-size:0.78rem}
+.key-icon-group{display:inline-flex;align-items:center;gap:3px}
+.key-icon{height:30px;width:auto;vertical-align:middle;border-radius:3px;flex-shrink:0}
+.key-icon-del{height:25px}
+
+/*  Canvas area  */
+#canvas-area{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;background:#3a3a40;padding:12px 10px 8px;gap:8px;
+  overflow:hidden;min-height:0
+}
+#svg-wrapper{
+  background:#fff;border-radius:3px;min-height:0;flex-shrink:1;
+  box-shadow:0 4px 28px rgba(0,0,0,0.5);overflow:hidden;position:relative;
+  display:flex;align-items:center;justify-content:center
+}
+#main-svg{display:block;cursor:default;max-width:100%;max-height:calc(100vh - 132px);width:auto;height:auto;}
+#main-svg.mode-point,#main-svg.mode-line{cursor:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxsaW5lIHgxPSIxMiIgeTE9IjEiIHgyPSIxMiIgeTI9IjIzIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiLz4KPGxpbmUgeDE9IjEiIHkxPSIxMiIgeDI9IjIzIiB5Mj0iMTIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIvPgo8bGluZSB4MT0iMTIiIHkxPSIxIiB4Mj0iMTIiIHkyPSIyMyIgc3Ryb2tlPSIjMjIyIiBzdHJva2Utd2lkdGg9IjEiLz4KPGxpbmUgeDE9IjEiIHkxPSIxMiIgeDI9IjIzIiB5Mj0iMTIiIHN0cm9rZT0iIzIyMiIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==') 12 12,crosshair}
+#main-svg.mode-curve{cursor:default}
+#main-svg.mode-text{cursor:text}
+
+/*  Toolbar  */
+#toolbar{
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;
+  background:rgba(255,255,255,0.92);padding:8px 14px;border-radius:16px;
+  backdrop-filter:blur(10px);flex-shrink:0;max-width:100%;box-shadow:0 2px 10px rgba(0,0,0,0.18)
+}
+.tool-btn{
+  width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;
+  border:1.5px solid rgba(92,60,146,0.25);border-radius:12px;
+  background:transparent;color:var(--wine);font-family:'Prompt',sans-serif;
+  cursor:pointer;transition:all 0.14s
+}
+.tool-btn:hover{background:rgba(92,60,146,0.1);border-color:var(--wine)}
+.tool-btn.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.tool-btn.danger:hover{background:var(--coral);border-color:var(--coral);color:#fff}
+.tool-sep{width:1px;height:28px;background:rgba(92,60,146,0.2);flex-shrink:0}
+.tool-icon{height:23px;width:auto;display:block}
+.tool-icon-text{font-size:1.4rem;line-height:1;color:currentColor}
+
+/*  Popup  */
+#popup-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);
+  z-index:200;align-items:center;justify-content:center
+}
+#popup-overlay.open{display:flex}
+#popup-box{
+  background:var(--cream);border-radius:12px;padding:24px 26px;min-width:290px;max-width:380px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.35)
+}
+#popup-box h2{font-size:1.05rem;color:var(--wine);margin-bottom:8px}
+#popup-box p{font-size:0.82rem;color:#555;margin-bottom:18px;line-height:1.5}
+.pop-btns{display:flex;gap:8px;flex-wrap:wrap}
+.pop-btn{
+  padding:8px 18px;border-radius:6px;font-family:'Prompt',sans-serif;
+  font-size:0.82rem;font-weight:500;cursor:pointer;border:2px solid var(--wine);transition:all 0.13s
+}
+.pop-btn.primary{background:var(--wine);color:var(--cream)}
+.pop-btn.primary:hover{background:var(--coral);border-color:var(--coral)}
+.pop-btn.secondary{background:transparent;color:var(--wine)}
+.pop-btn.secondary:hover{background:var(--wine);color:var(--cream)}
+.pop-btn.ghost{border-color:#ccc;color:#888}
+.pop-btn.ghost:hover{background:#eee;border-color:#aaa;color:#555}
+.pop-btn-icon{width:56px;height:56px;padding:6px;display:flex;align-items:center;justify-content:center}
+.pop-btn-icon svg{width:100%;height:100%}
+
+/*  SVG labels  */
+.svg-lbl{font-family:'Prompt',sans-serif;pointer-events:none;user-select:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <svg class="logo" role="img" aria-label="cruxplot" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="32 112 689 183" version="1.0"><defs><g/><clipPath id="02c56348e9"><rect x="0" width="682" y="0" height="203"/></clipPath></defs><g transform="matrix(1, 0, 0, 1, 34, 86)"><g clip-path="url(#02c56348e9)"><g fill="#dda94b" fill-opacity="1"><g transform="translate(1.377206, 162.763783)"><g><path d="M 34.046875 -43.75 C 34.046875 -39.050781 35.59375 -35.398438 38.6875 -32.796875 C 41.789062 -30.191406 45.085938 -28.890625 48.578125 -28.890625 C 52.066406 -28.890625 55.332031 -29.914062 58.375 -31.96875 C 61.414062 -34.019531 63.878906 -35.046875 65.765625 -35.046875 C 69.085938 -35.046875 73.128906 -32.109375 77.890625 -26.234375 C 80.429688 -23.023438 81.703125 -20.148438 81.703125 -17.609375 C 81.703125 -13.398438 78.660156 -9.46875 72.578125 -5.8125 C 66.265625 -1.382812 58.515625 0.828125 49.328125 0.828125 C 39.023438 0.828125 29.113281 -2.878906 19.59375 -10.296875 C 15.050781 -13.835938 11.34375 -18.566406 8.46875 -24.484375 C 5.59375 -30.410156 4.15625 -36.945312 4.15625 -44.09375 C 4.15625 -51.238281 5.59375 -57.71875 8.46875 -63.53125 C 11.34375 -69.34375 15.050781 -74.019531 19.59375 -77.5625 C 28.78125 -84.863281 38.582031 -88.515625 49 -88.515625 C 53.195312 -88.515625 57.289062 -87.929688 61.28125 -86.765625 C 65.269531 -85.609375 68.203125 -84.476562 70.078125 -83.375 L 72.75 -81.703125 C 74.738281 -80.378906 76.285156 -79.332031 77.390625 -78.5625 C 80.265625 -76.34375 81.703125 -73.820312 81.703125 -71 C 81.703125 -68.175781 80.539062 -64.992188 78.21875 -61.453125 C 74.238281 -55.359375 70.421875 -52.3125 66.765625 -52.3125 C 64.660156 -52.3125 61.671875 -53.53125 57.796875 -55.96875 C 55.804688 -57.851562 52.953125 -58.796875 49.234375 -58.796875 C 45.523438 -58.796875 42.066406 -57.460938 38.859375 -54.796875 C 35.648438 -52.140625 34.046875 -48.457031 34.046875 -43.75 Z M 34.046875 -43.75 "/></g></g></g><g fill="#dda94b" fill-opacity="1"><g transform="translate(87.235653, 162.763783)"><g><path d="M 66.09375 -86.515625 C 68.195312 -85.859375 69.941406 -84.726562 71.328125 -83.125 C 72.710938 -81.519531 73.40625 -78.941406 73.40625 -75.390625 C 73.40625 -71.847656 72.351562 -67.972656 70.25 -63.765625 C 68.144531 -59.566406 65.097656 -57.46875 61.109375 -57.46875 C 59.117188 -57.46875 57.207031 -57.910156 55.375 -58.796875 C 53.550781 -59.679688 51.144531 -60.125 48.15625 -60.125 C 45.164062 -60.125 42.367188 -59.070312 39.765625 -56.96875 C 37.171875 -54.863281 35.875 -52.316406 35.875 -49.328125 L 35.875 -14.453125 C 35.875 -11.898438 35.789062 -9.988281 35.625 -8.71875 C 35.457031 -7.445312 34.929688 -5.976562 34.046875 -4.3125 C 32.390625 -1.4375 28.070312 0 21.09375 0 C 15.78125 0 11.957031 -0.941406 9.625 -2.828125 C 7.851562 -4.367188 6.859375 -6.75 6.640625 -9.96875 C 6.640625 -11.070312 6.640625 -12.675781 6.640625 -14.78125 L 6.640625 -73.078125 C 6.640625 -75.617188 6.722656 -77.523438 6.890625 -78.796875 C 7.054688 -80.078125 7.523438 -81.488281 8.296875 -83.03125 C 9.847656 -86.019531 14.171875 -87.515625 21.265625 -87.515625 C 27.898438 -87.515625 32.050781 -86.242188 33.71875 -83.703125 C 34.9375 -81.929688 35.546875 -80.101562 35.546875 -78.21875 C 36.097656 -79 36.898438 -79.941406 37.953125 -81.046875 C 39.003906 -82.148438 41.242188 -83.644531 44.671875 -85.53125 C 48.109375 -87.414062 51.125 -88.359375 53.71875 -88.359375 C 56.320312 -88.359375 58.507812 -88.21875 60.28125 -87.9375 C 62.050781 -87.65625 63.988281 -87.179688 66.09375 -86.515625 Z M 66.09375 -86.515625 "/></g></g></g><g fill="#dda94b" fill-opacity="1"><g transform="translate(163.129861, 162.763783)"><g><path d="M 45.5 -0.328125 C 34.320312 -0.328125 25.050781 -4.5625 17.6875 -13.03125 C 10.320312 -21.5 6.640625 -31.828125 6.640625 -44.015625 L 6.640625 -73.078125 C 6.640625 -75.734375 6.722656 -77.671875 6.890625 -78.890625 C 7.054688 -80.109375 7.523438 -81.546875 8.296875 -83.203125 C 9.847656 -86.191406 14.171875 -87.6875 21.265625 -87.6875 C 29.015625 -87.6875 33.550781 -85.582031 34.875 -81.375 C 35.539062 -79.601562 35.875 -76.78125 35.875 -72.90625 L 35.875 -43.84375 C 35.875 -39.300781 37.171875 -35.753906 39.765625 -33.203125 C 42.367188 -30.660156 45.859375 -29.390625 50.234375 -29.390625 C 54.609375 -29.390625 58.148438 -30.71875 60.859375 -33.375 C 63.578125 -36.039062 64.9375 -39.53125 64.9375 -43.84375 L 64.9375 -73.234375 C 64.9375 -75.785156 65.019531 -77.695312 65.1875 -78.96875 C 65.351562 -80.238281 65.878906 -81.707031 66.765625 -83.375 C 68.203125 -86.25 72.460938 -87.6875 79.546875 -87.6875 C 86.523438 -87.6875 90.789062 -86.191406 92.34375 -83.203125 C 93.113281 -81.546875 93.582031 -80.078125 93.75 -78.796875 C 93.914062 -77.523438 94 -75.617188 94 -73.078125 L 94 -14.28125 C 94 -11.84375 93.914062 -9.988281 93.75 -8.71875 C 93.582031 -7.445312 93.054688 -6.035156 92.171875 -4.484375 C 90.515625 -1.609375 86.253906 -0.171875 79.390625 -0.171875 C 72.628906 -0.171875 68.472656 -1.5 66.921875 -4.15625 C 65.816406 -6.03125 65.265625 -8.300781 65.265625 -10.96875 C 64.828125 -10.1875 63.832031 -9.078125 62.28125 -7.640625 C 60.726562 -6.203125 59.234375 -4.984375 57.796875 -3.984375 C 54.035156 -1.546875 49.9375 -0.328125 45.5 -0.328125 Z M 45.5 -0.328125 "/></g></g></g><g fill="#dda94b" fill-opacity="1"><g transform="translate(263.768571, 162.763783)"><g><path d="M 67.265625 -43.84375 L 85.703125 -25.25 C 89.679688 -21.257812 91.671875 -17.851562 91.671875 -15.03125 C 91.671875 -12.207031 89.675781 -8.828125 85.6875 -4.890625 C 81.707031 -0.960938 78.332031 1 75.5625 1 C 72.789062 1 69.414062 -0.992188 65.4375 -4.984375 L 47.171875 -23.421875 L 28.734375 -4.984375 C 24.742188 -0.992188 21.390625 1 18.671875 1 C 15.960938 1 12.585938 -0.960938 8.546875 -4.890625 C 4.503906 -8.828125 2.484375 -12.207031 2.484375 -15.03125 C 2.484375 -17.851562 4.476562 -21.257812 8.46875 -25.25 L 26.90625 -43.84375 L 8.46875 -62.453125 C 4.476562 -66.429688 2.484375 -69.832031 2.484375 -72.65625 C 2.484375 -75.476562 4.503906 -78.882812 8.546875 -82.875 C 12.585938 -86.863281 15.960938 -88.859375 18.671875 -88.859375 C 21.390625 -88.859375 24.742188 -86.863281 28.734375 -82.875 L 47.171875 -64.265625 L 65.4375 -82.875 C 69.414062 -86.863281 72.789062 -88.859375 75.5625 -88.859375 C 78.332031 -88.859375 81.707031 -86.863281 85.6875 -82.875 C 89.675781 -78.882812 91.671875 -75.476562 91.671875 -72.65625 C 91.671875 -69.832031 89.679688 -66.429688 85.703125 -62.453125 Z M 67.265625 -43.84375 "/></g></g></g><g fill="#b1624e" fill-opacity="1"><g transform="translate(357.931851, 162.763783)"><g><path d="M 6.640625 23.75 L 6.640625 -73.234375 C 6.640625 -75.785156 6.722656 -77.671875 6.890625 -78.890625 C 7.054688 -80.109375 7.523438 -81.488281 8.296875 -83.03125 C 9.847656 -86.019531 13.554688 -87.515625 19.421875 -87.515625 C 25.296875 -87.515625 29.253906 -86.765625 31.296875 -85.265625 C 33.347656 -83.773438 34.539062 -81.59375 34.875 -78.71875 C 39.082031 -84.476562 45.695312 -87.359375 54.71875 -87.359375 C 63.75 -87.359375 72.300781 -83.09375 80.375 -74.5625 C 88.457031 -66.039062 92.5 -56.132812 92.5 -44.84375 C 92.5 -33.550781 88.484375 -23.640625 80.453125 -15.109375 C 72.429688 -6.585938 63.878906 -2.328125 54.796875 -2.328125 C 45.722656 -2.328125 39.140625 -4.875 35.046875 -9.96875 L 35.046875 23.578125 C 35.046875 26.128906 34.960938 28.015625 34.796875 29.234375 C 34.628906 30.453125 34.128906 31.863281 33.296875 33.46875 C 32.460938 35.070312 31.050781 36.203125 29.0625 36.859375 C 27.070312 37.523438 24.359375 37.859375 20.921875 37.859375 C 17.492188 37.859375 14.753906 37.523438 12.703125 36.859375 C 10.648438 36.203125 9.207031 35.097656 8.375 33.546875 C 7.550781 31.992188 7.054688 30.609375 6.890625 29.390625 C 6.722656 28.171875 6.640625 26.289062 6.640625 23.75 Z M 39.515625 -54.46875 C 36.972656 -51.476562 35.703125 -48.210938 35.703125 -44.671875 C 35.703125 -41.128906 37.003906 -37.890625 39.609375 -34.953125 C 42.210938 -32.023438 45.535156 -30.5625 49.578125 -30.5625 C 53.617188 -30.5625 57.050781 -32 59.875 -34.875 C 62.695312 -37.75 64.109375 -41.015625 64.109375 -44.671875 C 64.109375 -48.328125 62.78125 -51.617188 60.125 -54.546875 C 57.46875 -57.484375 54.003906 -58.953125 49.734375 -58.953125 C 45.472656 -58.953125 42.066406 -57.457031 39.515625 -54.46875 Z M 39.515625 -54.46875 "/></g></g></g><g fill="#b1624e" fill-opacity="1"><g transform="translate(454.584865, 162.763783)"><g><path d="M 6.640625 -114.09375 C 6.640625 -116.644531 6.722656 -118.554688 6.890625 -119.828125 C 7.054688 -121.097656 7.523438 -122.5625 8.296875 -124.21875 C 9.847656 -127.207031 14.171875 -128.703125 21.265625 -128.703125 C 28.015625 -128.703125 32.21875 -127.207031 33.875 -124.21875 C 34.757812 -122.5625 35.285156 -121.066406 35.453125 -119.734375 C 35.617188 -118.410156 35.703125 -116.472656 35.703125 -113.921875 L 35.703125 -37.03125 C 35.703125 -33.050781 36.035156 -30.535156 36.703125 -29.484375 C 37.367188 -28.429688 38.835938 -27.90625 41.109375 -27.90625 C 43.378906 -27.90625 44.898438 -27.820312 45.671875 -27.65625 C 46.441406 -27.488281 47.382812 -27.015625 48.5 -26.234375 C 50.707031 -24.796875 51.8125 -20.867188 51.8125 -14.453125 C 51.8125 -7.472656 50.707031 -3.207031 48.5 -1.65625 C 45.613281 0.332031 38.75 0.660156 27.90625 -0.671875 C 19.375 -1.773438 13.835938 -4.597656 11.296875 -9.140625 C 8.191406 -14.554688 6.640625 -23.191406 6.640625 -35.046875 Z M 6.640625 -114.09375 "/></g></g></g><g fill="#b1624e" fill-opacity="1"><g transform="translate(508.889908, 162.763783)"><g><path d="M 4.15625 -43.671875 C 4.15625 -56.960938 8.800781 -67.925781 18.09375 -76.5625 C 27.394531 -85.195312 38.023438 -89.515625 49.984375 -89.515625 C 61.941406 -89.515625 72.515625 -85.222656 81.703125 -76.640625 C 90.898438 -68.066406 95.5 -57.132812 95.5 -43.84375 C 95.5 -34.65625 93.117188 -26.488281 88.359375 -19.34375 C 83.597656 -12.207031 77.8125 -6.945312 71 -3.5625 C 64.1875 -0.1875 57.125 1.5 49.8125 1.5 C 42.507812 1.5 35.425781 -0.296875 28.5625 -3.890625 C 21.695312 -7.492188 15.910156 -12.8125 11.203125 -19.84375 C 6.503906 -26.875 4.15625 -34.816406 4.15625 -43.671875 Z M 38.859375 -31.796875 C 42.398438 -29.085938 46 -27.734375 49.65625 -27.734375 C 53.3125 -27.734375 56.960938 -29.113281 60.609375 -31.875 C 64.265625 -34.644531 66.09375 -38.742188 66.09375 -44.171875 C 66.09375 -49.597656 64.375 -53.640625 60.9375 -56.296875 C 57.507812 -58.953125 53.800781 -60.28125 49.8125 -60.28125 C 45.832031 -60.28125 42.125 -58.894531 38.6875 -56.125 C 35.257812 -53.363281 33.546875 -49.296875 33.546875 -43.921875 C 33.546875 -38.554688 35.316406 -34.515625 38.859375 -31.796875 Z M 38.859375 -31.796875 "/></g></g></g><g fill="#b1624e" fill-opacity="1"><g transform="translate(606.041139, 162.763783)"><g><path d="M 57.46875 -58.125 L 46.671875 -58.796875 L 46.671875 -35.875 C 46.671875 -32.882812 47.140625 -30.722656 48.078125 -29.390625 C 49.015625 -28.066406 50.785156 -27.40625 53.390625 -27.40625 C 55.992188 -27.40625 57.988281 -27.320312 59.375 -27.15625 C 60.757812 -26.988281 62.226562 -26.460938 63.78125 -25.578125 C 66.320312 -24.140625 67.59375 -20.429688 67.59375 -14.453125 C 67.59375 -7.472656 66.039062 -3.207031 62.9375 -1.65625 C 61.28125 -0.882812 59.8125 -0.414062 58.53125 -0.25 C 57.257812 -0.0820312 55.410156 0 52.984375 0 C 41.460938 0 32.710938 -2.597656 26.734375 -7.796875 C 20.753906 -13.003906 17.765625 -21.8125 17.765625 -34.21875 L 17.765625 -58.796875 C 15.660156 -58.460938 13.390625 -58.296875 10.953125 -58.296875 C 8.523438 -58.296875 6.503906 -59.234375 4.890625 -61.109375 C 3.285156 -62.992188 2.484375 -66.207031 2.484375 -70.75 C 2.484375 -75.289062 2.757812 -78.582031 3.3125 -80.625 C 3.875 -82.675781 4.648438 -84.144531 5.640625 -85.03125 C 7.410156 -86.46875 9.628906 -87.1875 12.296875 -87.1875 L 17.765625 -86.53125 L 17.765625 -103.625 C 17.765625 -106.175781 17.847656 -108.0625 18.015625 -109.28125 C 18.179688 -110.5 18.707031 -111.828125 19.59375 -113.265625 C 21.03125 -116.035156 25.296875 -117.421875 32.390625 -117.421875 C 39.910156 -117.421875 44.394531 -115.367188 45.84375 -111.265625 C 46.394531 -109.492188 46.671875 -106.671875 46.671875 -102.796875 L 46.671875 -86.53125 C 51.535156 -86.96875 55.210938 -87.1875 57.703125 -87.1875 C 60.203125 -87.1875 62.085938 -87.101562 63.359375 -86.9375 C 64.628906 -86.769531 66.097656 -86.242188 67.765625 -85.359375 C 70.640625 -83.921875 72.078125 -79.660156 72.078125 -72.578125 C 72.078125 -65.597656 70.582031 -61.332031 67.59375 -59.78125 C 65.9375 -59.007812 64.46875 -58.539062 63.1875 -58.375 C 61.914062 -58.207031 60.007812 -58.125 57.46875 -58.125 Z M 57.46875 -58.125 "/></g></g></g></g></g></svg>
+  </header>
+  <main>
+    <aside class="sidebar" id="left-sidebar"></aside>
+    <div id="canvas-area">
+      <div id="svg-wrapper">
+        <svg id="main-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div id="toolbar">
+        <button class="tool-btn" onclick="undo()" title="Undo (Ctrl+Z)"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADsAAAA1CAYAAAD/L5PDAAAFaklEQVR4nO2abWxTZRTH/+dpuw3wZULCNlQ+zBDfYjASUGinxQABATGSzWVtYROZL6xbwKDxizYxfpEEaAviSHTL1gJSCAH5IoJU1jqMYpiJCRg0hKgYNWMw9tL13nvMnZCU7t6yltq38EuW9J5zntv733Ofl3OeArcpTCgdN3Es2jRJGS6pHIlGzwW6NwwhRxG3egO7xb2YB4vPkcI/FhuMf9jM3iUoxJ61WbYtIyj7ABTHmPuMxjsr2oMNwyiUnq2rcq8gKPvjhKqUcnTgAeQgIpVGDrPnRcEUAFCk4b44qIz8ikIQ67B4q5mwB4BJwz1MRA25OkmJZILtZncNg3fpCI0QUNPZ5fwC+T5B2czel4jYB8Co4R4CixW+cNOXyGHEeIIcVe7aBEIHBfB8rgsdl1ibxfMyM/n1hJKg5R2h5qPIAyiR02H2rmHinTr/lAGFefmucMtx5AlCz2Gr8qxNJBSgZfkkVFesw+JuJMbHOv6rRFjqCzmDyDMo3uAwe19j4o90XvHLzFjsDzefRB5CsRd2i7cF4C3pyobSwACAKwDOAtyjEI5HJflIqpsWuv7BbvHMBHAKgAG5zRWA9kAWm3zd684l01Bc/8CM+XkgVOUugBthkM/YqzzeeuuW0qTFCsIvyC8MYDRJkqHH/rR7XlJiO0POwwA+R/4xHQodV7ezNwuk2It6a1uJJF/dD+bndOL7mfCmYOpDRlCmMqEMTI8DWABgQqJgZqrzh52f6QWMmXWdSzzFff28j0HLdNp8r8C4aFfojUvIII2zWicOTRheyRAugCt1wkYgeL7vRMs3Wk7NJab6UVdRUenkvURYoXPTHyKytDDQvaEXGUZ9tuLSKW+D2KWz6blgNMoz24Pr+8a1gwr85BoZ6eutAeiAznc+UWwwHVs1Z9sUZBj12Xxh5/sMoXbEVY2Q6ZIkPtBqm3Dz0Dir1TRYMrwbRCt1QnpMhIVtXc1/IwtcK/gd1Og0WUA80hFq+nncKd7OU69GfzNdqgWwVydkZpRxzDFvx1RkAX+o6TCD39VwGRTIbyWdzwaDLilSUV4HHk3etXgMIvp1rdk7DVlg0lDJhyBo7KSottq6/Y6kKxWBQI0cmVZRD4KaxI+BgYeMhKP11u3lyDDq28dM72m4JpVE5UUpFdxGBZeXr2agUzuCH5YkOZiNHh6RoweuJQ03oBCeTbm6qAqeEeqtZ0a7TsiDJuJDVqtLq4Tzv/FfFkRH4u0EqJuR1OvGLriUGeHeNQR8quVnYNZ06Z6nkGGY+LSGecYtnwiogjtDzleA0SR/DIqAgsxzUcM2OU2neMS+UHMTE6vlm1hORsoqvk39vik+jcKXNczG2CF1i0eWxP6ulteZUA3wJwx6hyZGFqhjGxmGBco0zEPq0nn9Ii0Tib+rWT22VP+yB+M+DeufaT2MzhUEyKphPnNjTAGgru0MzB7jYOouOLEGgSatpIbBN5w/5UrJNGVWzd18r2IwqtnNxFg7M877w85KdRItiJ5VlxXFYGiLF6pC4O2xQvNe7P3RKZsBWqjh+itiMsav/+lZejKNWie71M87GNygE7IxEFw3poqRd2N2lcVtYdBWdQ+uGUA45OtyvhD/CudNz1YvaL27JDK8hJnsCrA0QejZiCQ1aAnNas86LFufBBtsTKyf8DOXgUjdBlbq/Gglvqr4THtw/Xm9gKyIravyzBGMcBrfrB4hS0s7ujf8nihIIAsI5tVpEqq+rq0RWZp7M6F5M2Z1OCnAGztCLaHxNjAiCxCLNiZeO45xGE8/mA+SQbR1nnB+lfT3IkvY5m2dDSHsBFToxTBjgIgvg+iskMXpC0X/fBebn97mNhjlX0W1+8OlNVUxAAAAAElFTkSuQmCC" alt="Undo"></button>
+        <button class="tool-btn" onclick="redo()" title="Redo (Ctrl+Shift+Z)"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADsAAAA1CAYAAAD/L5PDAAAFVklEQVR4nO2aa2xURRTH/2d2+4JobEGF+IiPxlhjiBE1tt1tauKXRql8sJK22yY10cba3S0hoGiUhkgk0kB2i8ojMdq9WwgoH3go9iVhb2uIYIyPRKNQEw0WPlBRKMV255gpLWl3Z7tbSvcVfp92zzk90/89c+fOPbPADdITQtLCVFXisYMpd8Ri7d575NULaSm2omKPJWtgYB8Y5eOmfkFyeVug6fvZ5BVIQjIHzlROEqq4V7Lorira8kjaiSWW+RrzQouwdDvsWx9NK7Es+RCAYJgdyAPLrpri1sfSRqy/r+kbgFZd0RdGLhN3Vtm9T6TFAjWBo9hbD8KHEf7P80KKsra+xq+RDmIV1XbvS8TYFmEWXgToWcN0HkGqTuPJ+AOunSCuByARznyAD1YVe55COlR2gmqb90UCdkYo0BAJWuY76uxBOohVOGzeSgBtAKwIZ4iJy/0BdzdSdRpPxjBdu4i4BsCoxj2PmPbX2rxPp0VlJ3AUe14AkT9ChS+BxXNGb2NnSld2AqPXvYcJakqPaNw5IHmgxuZddt0qW1G4OS9LWMtAVALwEgD3AbgZQDaSg2EiWu4LOL+8ZrFq5yIYqwGoK5eFJIaAc0FY89vNhkFEmPNaam2euyXIA8ZypAgM5JEcfRxAR8xiq4tbV0jwjvFpmkpIK3Ay5gXKUdz6FhHvTkGhAGPjJ32ukzHdsw6bpxmgdVFSqvvhMEC/MPFpwfQ34gCD1YK4AYAlQshmw3SpNydEFeuwtdYB/NE04x0n5nU5w9mdO07U6x4Bc4aj8P18sgR7GLhLG8DYZPS61oSatWJrSrYUsLQcV7sSjfsigAbDdPpUTwFxpta29QEJ7gH4Dp2fwBt9pnutzqe5Z5k4KLZFEPqnELAbpqstEUIrC1sflJBfRRZKGyIJ1a7GVXZvOVhtFML4lySXtZnuH5EAqu3eh4hZbfIX6fzEWO/rdU67vlhDDYLpdW0kUa2vz5UQoTVFnoeZoYTepvMzYZ1hutZHy0PhVw8/hUfR50bA+QwSwPj60ROpokqoPxBdqK6yz0ODDI6+iQSg+sTMli4AC3R+Bq31B5wbY81nnfyFGLr2xg/tfSu/Q5ypsnmWWkAdzMjTBhDW+APOTTPJKUK+h3XcCbQfcaaytGWhAB0a6xNr4VVGwDUjoVPE1tm9twK4BSFI4rhXVYxmqqOP2zUuBqjJMN2brykvxgmyyNWH0F+IN0T/aazMxG7DdHquNa24mkkGM/UD4x/EmflDmfsI+HmSKcigRn/A3TqbvOLqJ6tQ28BwWGqfbXPJjhP1Q8PZWU+qRQhELZJQ5DedH8w2r/Xqp+zhsxjK4tBnLzFpt2Zzzd6u+vMAZrwIxVRZX8dqVdk/wkO4FGmCCPl+LCyCqLy0tDnm9k3qiCUe69VMgbHgzpG8FUg3sZIzPgNwOTSIgXecZd6k7iTOWGy72TDIjF2hQUS4Z/ACWpDiiFCDhcS72k47o3HscDiFIZ2xxuZtYWBKs2oc9Wh6L98890YzmnXnpUmN0BlzLmW9zdC81165OK/9Zl9wQLVIkGJQlJfmXvWDjQgh6tiwHYQ9VstN3R8fqRtGkkPTOR0lniJI+iKGBvkQgN8ZOE1X+shaGNzPkNvbzZWnkAAoWsDYj6xYHgSw+DqNORgckQW7jjWdQZwR0QKMQOO3JDPUS/3h6zRmrjWDtO2fuUbEEuTre+WsYbrKwKx2Ur/OdlAJEfee84xP3tWJ9+XFiwqYUEHgg7rdVixnpkJaP0UCoNn88ctLt8+7OG+4UEAskcz3q4WMpj95P0WCtvuOOvtnM+4NboAp/A8SZskc0Y5ZqwAAAABJRU5ErkJggg==" alt="Redo"></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn active" id="btn-select" onclick="setMode('select')" title="Select"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEsUlEQVR4nO2bT0wcVRzHv7/fzFJiMN5aqDcPWr0QT0ZYJGlMiSUmGkurskgbNUYD0/aiHholNqmJHqTbGA9aSWFBA/GgaeL/SncXemzVxGoTPTWwtNE2UmMFdn7mze4s6wANsLOzb3b9HN7sb3b2/X7vy7w3P957QwDQHT3+OIGGATQoG8ANCHUnpvo/W+P7AgT8bBIeGkpZV5XdE42fFKAXgOG5NAvBUGLKel4ZTz0wuM2IcBLA3d46lX+bJDaWOvjpWvEVf18K7BRE+zyNawChs9BIod2rNV4hwI6soLnIfmKVxisMEPYUHBvcvEbjHf8svPsW/htYnJhLxnSClpwQeSYImM/adKwQgEHHYAsLcLu3AhJc/Ht743fLJ2g/BPsA8YhA6g74yLUW7mz8dktm9iiEdqyoE5g3zKU31/DflT+9msgbhlQRi8bH3YoTacs5pyuxaFzyH8cTaavku4BVIcAvOZMuQnPUmOMcJXf0pQssNDUObJm5koywfQG6Y0faQdnmm9u3nql0KP9TDVDRc3YIggn3Oa0rsejxDwDaY5P0+p0H3AHCAWgP7VexlisPMFAGurrGjfrM3MPImudHpl+8UmJ1hp+xMgKgbjYzICJfCC9eiLUO3gON4CCcEOA2ugnEZ7vb4vehlgTwsI0EZ3QRgVVBBDtvZ0MgQtbPWFkVAvoYwHWATiI4NiUCAR86sYoTc8kQAqD4n61VmBPCztGU9RNqZAzQakxg9znd3RLf1dPy3lbdRVAxqlhVzL4JUDebGSDGl8JLk6gc6xJBeDGpYq2fybzm31MA7nNa7kVlWY8ITqxCWDGTFNYxoKJjAkNPAhOBoS+BiMDQm7KLwLmD3Mjb89BfhHyMMu/bfAAxH4UtSyJ0GnriirDThvQYQp2GaRfWLcKeCm8E39NmRrjwfUxgVTwdfecuNdkYazvxGGpMBM4VfASgZyGiVmBRSyJw7kDuyuuKxc9qF4ERbkoWgRF+ShKBUR1sWgRG9bApEThs+wP8FoHd/QFioyNC0o7wsyERKGSpsO9pM6N6WdedwO7+gFg0fj3WGn8fNSYCh29/gL8ikLePEmivwJ7/p6np64mJvc76m5qDr5uZ28W0crOkQC4l0tb3rq12gJomt4KoMG9vkxwmwYOoLKuOCab3KoGMKxnqZzJvAHi9sG5AOOJu0PNgP9M2eP9w6tAPyjAifFacqevlq2mNH1ZqUqVYBP5vHrCMkGwqbCpueQi6g+nmAXUzc9PuLe52Afci7/feLuD+9R3sSDvRYlTDLlAswje9LfG2U9PWr9WcB9wSAd4dTVt9K8aAWoCAP0D4XH0OhwCElxMp6+1yVM3QHIG8Va7G6y+ASGI0bb1aThcMTSHI6cuRawfKnUUwNEQI53DbwpOTkwNL5fZlQj9+FDE7R76y/grCGUMr6DdQtmMs/dK1oDwy9OEqgx5JpA7PBumUoQd/MqNjON13KWjHjMpz02b70eGkdb4SzhmVJQui2FjykHqDFLUmgJDQC4lU/ycVjAGVE4DwyshUf5Cbs/XJA0joxEi6v2z5vX5vjFDhfQRlnBqZ6jsITeAgnBTeRyCMXjZ+f06bWUIA/wICE+1I1Xx/wwAAAABJRU5ErkJggg==" alt="Select"></button>
+        <button class="tool-btn" id="btn-point" onclick="setMode('point')" title="Point"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAFAklEQVR4nO2ba0wcVRTH/+cMCK1QSmLUxIjGUhLjo1ViFVgI5ZPGRFPjE5aH0bQxhYX6iKT1g6mPaozWXWhSUpsqLGttY4zW6jdsXKBRER+JJn1oQvWDGtOHYO2mO/eYu4UyhQV3l93t7oy/D5Odc+feO/e/996Ze+4ZwOFQOitbW96zeCLvdFkOG5cJqBgkl0YShP4myImwMv88K3Jo78En/7GBAEINNd03kkKdiKwmwkoAJTHUKQCOieBbJgxAyUDfsOcHgLQ98wVocnlLFOgREB6HoDQZZRLwiwABxbIz8Hn7kWSUaSk7OdRXbl3JbGwEcH8Ke5YQZD8gL/YNdnyRjAJpoQU0ubrLFJQXwJ1IL/sVy4aF9ghKNGNL7a78s+HxTQQ8AyAPF4cQCV5dugQvd33qCaVNgJbardeGwzm7AbkdmcEoTOMh/8H1R+PNyPFmaHB514TDxncZ1HjNrTDMkfpq770pFaCx2tdCoD0AliDzKGKh991VvnUpEaDB1dUpgl0AcpC5GCBsd7t8zyZ1DnBrVQnbkUUIiac/2N61YAEaXN41BNobUTe7MCF0n3+o7aOEBXBXbCuFYX6doWM+FsYh6jb/UMehuOeAtrt8eTDM97K48ZpCEO95oOKNRXELcHwcz0UeL9nPzfmc0xnXEKiv8S5nRd8DyIc9CEHUimhDgaNdzYp8Nmq8Jg/Er8fUA+qrfatYkJSVVqYhSq3qH+74at4ewMAm2BRi3jjLBgvNlb5lJuNIul1laUQUzNLA4Iafo/YARWiyceM1RGS4rQae/ikkRBck2hECGiOOpZkCNFV7bwLkOtgdQWlDddf1swQwFdfBIWhPdbQ5oBZOgWi2AEy2eO2NCRG55QIB1pb3LBbgKjgEIpRMLZBYH04vCi1PxD+YxfAlubmRTZtIo4noSjgMQ8kV5wUQoAAOw4QUTveAyRNHIeccPQyHw/ogoHE4DcJfliGACTgMY/JPZ30Qkd/gMEym388LEDLDh/VqGM5B5XJBZFs9IsBkTM6vcA5jbx949MzMp8AoHIIA30z95mkzHYBDIMFnswQQxgAcgrWtZDGT29WlJ4ZlsDOEo/5gW9lU2B1bUgQQP+yOol5rzCFb0wxFfZOBinZFFIX7rQa2nrwz7PlJBPPup2czAnxg3ROIuhgi5s127QUstGWWDTPwB1v1+8AnsB/7+obaRmYaOeqlptEBIPKmZBNCDH46WgJHM0YCDkleg22gLb2DrXq9MwueK0txAb1EgI4PynZGigvllbkSab6ck7vFWoQiZCcnFczymTO/FZ4vt34sKpLmiA8x+zAF3Dhf42PyCQaC7R8K4QlkF3qre13/YOvH/3Uhx1Jaf9CzA8CckVYZhhBRZ99Q285YLqZ4g6VFsCOD44VNCNb7hzw9sWageGtwV3XdA5LeDJwYT+oxH0u3t0KJ1FRf2X0Ns9oN4A5kBqOGwoN60o43IydSW2C4day4ELUk2HyR3xjPAPR86MTxikQaj2QERE0GVL8J4G6kl32GwoZEGz4FJetu3C7fCgGeIqA+haH1kc/mTKIXAkHPl8kokJBkHq7ZdnWOMrUIjwHQcQfJ4BiAd2EabyXyYdR8EFJIc1X3DWE260h4tQ5L0ZEZMcw7eoNmTLuutfdWOzD7g54fU3WPhDSivzVU5qkyCF9uEpZCnft4mpgnWOQUSP3BRtHhqU2L/0Hq+Rfypa0TG+xg+wAAAABJRU5ErkJggg==" alt="Point"></button>
+        <button class="tool-btn" id="btn-line" onclick="handleLineBtn()" title="Line"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADPUlEQVR4nOWbz28MYRzGn+dNS10k9EL8KaYhcXRwEQdjSEOo1iyJ+O3QU0kQuuNnQ1rdXYng6iBCwu5fwRFxwYlQzCNTRLszZKvd3XnfeW77zDuTfD47+93N7AxRmIg7vOgogH0A+ijeX/F52XGiIAm88b0Cb8ztBFwxKEgEbmvuCGwrjAAQH5srCR8LI8AI0c+z/k9IRU7OgFGMmpfe6iMShkj2ipieef9utK+/39P3eBjGrIB0t1ovTffAwbzw+ocIneXs2ytQONG3qj+uPAtPA3gyd62BgyHkN3eCdmStNXAwBL5k1J8LI0DipXSJy1lrCQcG3ov1q0skgtmPO1GbWbvmUt+bt1tiYj+BXgHTtXo4iWQauCYg8MolAePzSulItXHwfCv7G1geAbtSJZnuXBVA4FtGm9E5KgDiRHNFxDdb3Z2wMIE3Hohmk+L4aa1Rmva9aBDEHir5CYCpaiOcyBp4TggIvPJ5AYd/vxYZ1J6H1f89noHF8EkYa8NijmlgMXwSko+cF+APRGNZ8BDOVerhPacF+APRGKUTqQ3CuWqjlFzjg7MC/DbD51pAJ+BzK6BT8LkU0En43AnoNHyuBHQDPjcCugWfCwHdhO+6gG7Dd1VAHuC7JiAv8F0RkCf4jgvIG3xHBeQRvmMC8grfEQF5hm+7gLzDt1WADfBtE2ALfFsE2AS/5AJsg19SATbCL5kAW+GXRIDN8Iv+c9T3ou2EaqkNwli1UToFC2IWt7M22gy/aAGSHtsMn2QBd4qKgVceFkwweyOaeLvSOHDDH4hiCBtJPq3WwwewLGx1ob++fIjExbmdwJFaPbwKi2NaXUhid6qDBmF5zALWxs0FMzp3zwDgVqoUJ2F5+K+BB3CngK8QrlUb4Z1f3aCSBeKtZAi2ejeWVQJ8r3yYwLxbTQX6tXp4B47FZJUkhlKd4uRxM+diMlsx3TOjc1cAplIddRsOhrNPVA6Ud0vcSvATEE+86vnweN23VccI7gQwQ+h6pV66avvAywp9LzpO6My8UtpcaRx8iALEEBpJtcR+FCQGwLLmUsByFCQGSl/QIOnc9/3fYnp6V54kcAHgaxAvAR6qPA+dnPhZ+QHKwsCTKgvffgAAAABJRU5ErkJggg==" alt="Line"></button>
+        <button class="tool-btn" id="btn-curve" onclick="handleCurveBtn()" title="Curve"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADYAAAA2CAYAAACMRWrdAAAESklEQVR4nO2abYhUVRjHf8+5d92CldiNVk0r2SAFKQii2BdzUrIkiiBWfJktMwgsdteV6ENvTpYfhFDcXYkoSJzd1ZKgBF2ILW3ctZcvIRFSkQmliYSGFtg6c544Y2tLLXru7MzuXPD36b79nzv/Oeeee87zXLhKvJCxDq5o6L7FiH0YYRboKTG2P53pOEJcjaVImR+brt+g6PNAxahTFuSd6qna1tXf9hcxIBy984+pF8e4zoA+feYc1wBPEKcWW+G6n7E//Kel/ocq9b1DbV9Q5piRDQlyj1zJVP46I48RA8ylLXUDhQeqs4mVMWTYT6LXEQPMyIbAH34SmUqcjClyzlNTRZyMGayXMYEbiVdXlF99BAo1LQ1v1hIXY8Mm+M5XJGb4NuJibFfmmV+AP31EVuR2YjTcK4ibeVwRgQXExxgo+o2PSJX7QMdcGZSlMaPymaeuNtnUdQdxMZaT7H5foaDLiIuxvsGOo6oc8xEqpqW5+f2AOBhzCAzghc6ccvzkIuJizAjv+YrF6HPExVjd4OlPBX72k8v9yXu3NhAHYylSFrTXO4KVF4iDsTzG7rg4LfTioZWNXUuIg7F0puOIoHt9g4ho16rEuy7RU+YtBliVjRHi3JrLnl1PGSGXO5ls7PwEYaFnLKuWJb2H2j6mnFvMYQP7Kv4YMaST87fMoNyN9WXWZoCdEeLVosGe5sS2qrI25gjDYB3wO/7cVXkh91Hrks5KytnY9gPPnhSINjAIC8+cY0fzvNQUytWY4/yM6dtQdd0yCkunVNdMWrcU3wsfr9880wbh18ANEW/wlUru0Z6DHV7JogltMceOz9cdFyNuDZYjAgp3o8HhZNPWB5lAJKog2bQ1BVLIy9iqyKaKoGrD9gNPnqfESHSJSrKp822Qpwq85VFR25oeat9XmN6PghIyiUQqnJWr+QDFlZ4KZa9gX0sPrv2SEiCFCpvrN19bGYT9jDMVpzBgRN44P33awO7dSyM9v5djXCm0vLkw3DXOlhv5KcdR7TMBO+sypw9fXBeOIxrjxHXLm7I1bymspnj8BhxQZL8R/ZZcxZH0oTWnogQoUtIzP6CsB3k5yiskIm5ad8LV8SycFTgN/KTKh2PVxIuazV3Z0LnYzfDzk+GJZWcYTl09+jVS1H/XrcWyKncCvhnlYrE8mz3bPfpASfLvLpFaeeLkGoTXgYmqWVtrdG5fpj1fWCnJ8+CG7Z6htu4wDOai2hMhMTQeTGBZfGmnlHdyS56eofYWFZmPUPqUgUrthBgbofdg61DPwbYHrHAPwp5StaA1uOJlnkmpcS2v75obGG1BSAI3FynssMll69wqxO1MavHOfW33fWP1gkBkuSKLQOsKjSXIxvRg60v/7pcRqxJbZmezoauWJgTmKczx+K7kgsKm3sHWVy6Wm8vQ2FisTHTOIqdzUDPNYKsUqVaoEsWo4ViQze4b6X5XIcb8DSDtWr/Z6JIJAAAAAElFTkSuQmCC" alt="Curve"></button>
+        <button class="tool-btn" id="btn-text" onclick="setMode('text')" title="Text"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAA4CAYAAABNGP5yAAADQElEQVR4nO2bTWgTQRTH/+9lE+NHqhUVBD0UEbEiKnixiRVBT4LgoSC1RRD8AInBkwcvOepJbayiILQ0alEQPUgvWoKt9qTFg+BFsIhtLdoqfjU2O0+SWo0mzaZh0+w6/cFAdt+8/0we82aZmV1gDr2hqR+HgmcD4xQw4GB8RlLaEic/2qlJDQ23PPOGh+9AsBfu4HnSP2/H7QdHP9khxv7Bd1tc9OfTbPInk/vsEmMhLILLUJCAXVoMzWFoDkNzGJrD0BzDwm4CNFCcVGZmXm5R6RNAH4rUWwlgPiocgLF4b3hNMUIHtrccJsHVQnUEaL/eG44Uo9ccaukWYCfKDENzGJrDIjJewF7IVlYESE5vJdv6xUur0A9B/zTduIYKQSTtk5NwDkOmovt2tcOxrhPJ6ipsY8V1DOyeKsRmbbw3EkWF6OiJdKbYU5PdJ8Vqh0++r+t8HB609SkQ6zqRHm59cBidj46/AZAuZYOhOQYcQsOuK4sz63wR32y0pwivrvdEHjomAL7k+BkROpa1S1dWSCAHgxc3OiYFSGjZbDdpkix3TAAqBUNzGJpjwLmkCHI8n0FA1QDO5DE9J8ilfD4KFCKg2U0BMDt6I3mX1/vrW1cbyswJgAhexx/n92nafkFBqNnJKSD/XCtbxYVy9BSbyjkjgOgGRDYBNNknUffslPcaZreZ8jz9lT4gyMAEe585JgDxnvBdAOlSFtoSJ18D2OrkFKgIDM1haA5Dcxiaw9AchuYwNIehOQzNYWgOQ3MYmsPQHKM0N6HG0OUl2XdIzAW5exp/QyB/Y+hSZj0+xaAx8jmRiKbglhHQWHduc1Mo9paRGs0ugJy39pYj//qtSi0dbQrG9romAB72hAGk39+xiwCRnIZbUkAA215TzaLKqsKB4IWDRLQ+c6FSgXxHaESobQq1TG6WCkxTUcfNvvDLQroGXEBzfaxGlLT9uTPt+eFaAKemqngMbAawx/1PgZRaWJKfiKUfl6D6paTOFFIkfEaF4Jk6KKAVwIiNffhGKu8pz2+8ND4A0NuZCgvRE6s6hBJIf2XiHXpvOXEVw8TYyNfbL6I/LNvcEPV5q1cUnQoTfo+y66uSOfAf8xNksALPVSz9tAAAAABJRU5ErkJggg==" alt="Text"></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn danger" onclick="deleteSelected()" title="Delete"><img class="tool-icon" src="data:image/png;base64,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" alt="Delete"></button>
+        <button class="tool-btn" onclick="duplicateSelected()" title="Duplicate (Ctrl+D)"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAD/ElEQVR4nO2bXWhcRRTH/+fcux81AUlStEnRF4svIm2pptBsIGJiwYL6YIom2RYK2mLsqqAP1QcXWqOi0DZEpX5LtxYbUPBBpdqw0E2rtKWUqmiax7TaIkmF2u7d7J0j40fZ2JvgR+fuXSc/WNg598CZe2bOzBnuGWAeu6GwDD3Y8fJC9mNLWbgxDHs+qRL5cuZ0/PzxfD5brpoD1rcN3eKTegbAWgAOwmdKIG+UksmB4S82/hyqA3rad97LQnsBLED1GYPvrMkd7h8PxQHrUoOdCvisSqM+G2NeMtFaORPYhJWOjqyrCK9F7OU1NyeK3pZKAZuwcmNp4e0QLEEEIeAhPUB/tl0TRpTrE9QV0VWGSO9EbOrDuVblq0V3xyv18bL/HAGZSrkAjS3lhqUAjhmbAd71zV8B+HKGkPBsbvSxfWG8vGY433+h5Dp697kCFl58+T9MGB9e69M1XieJPA3IWyL0QO5gZsCErTn7ke+/ECQnQsJoCGh273/qFwDPI+IwLMed7cHDK3bFLiWLXcJ8B4lqEVAsjA4JcA6EE8opfbQ3/+RPVXFAX9tQ10X2XoXQEohAwjsy/G5JAKcc355ODb5wU2FyIIusCi0E0qmdaZD6NAL7eJ0AW8dTjR9kkTUWqlzZ6Fm1fZmA3oxYBnf/qVTDjOzNmAOYnW0A4ogYBNqij9NG14B1rUNNCmp1gI4HogMQ0duaUXToE2glIJcTlT+o43L8HgBvG3OAisutwYui3Jc7mNGnulDo7tx1baLofQugpVJOhOVmQ4DQFKTgNTd/jhDRR1X5axqtEVxn1AEkwUmRTmsRMgQE2TSyFzMsh2E5DMthWA7DchiWw7AchuUwLIdhOQzLYVgOw3IYlsOwHIblMCyHYTkMy2FYDsNyGP9jurv3BX7iE4KywgHJH368O/CBknPGK0RMk07tWAlxeoVk0Swq9QLcGSCfdmP+yZp2QE/7YKsICiD5x/0XwSfv5p84X9MhwCLr/+XgFV3wjMoxhj3o8rwN740++k3NO4CE39Gx/Lf1ge8A6soVMrpwewYuapDdo5uP9q7a0QbmPgKaA5UIJQgmRGFkIj45MluBposaZc+hx48A0L//BMNyGJbDlXdsghTSd71Uh/CpD4xpoxUivpwJ1LiU2KZLzxFS7t7XPrgGQRmcYMKETaosjb24wDsLoAERRBRW7zmU2W9sBrx+bOO0vl2FaPL96fjkiPFFsJRM6pr+U4gWZYA2mbpowZWN325T+Y4+Qo4hGhR1DWeusDkf2jaYO9w/rq+WAXiRgElUhzIIHzvCtwWlr1cTmuuhvl11w3TTMp/VYkfYeA2xIhFSOKvI/fr9wiNTpu3Ng3nwKy0sRMTM1uRwAAAAAElFTkSuQmCC" alt="Duplicate"></button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" onclick="showExportMenu()" title="Export"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAA6CAYAAADhu0ooAAADBElEQVR4nO2ay08TURSHf+dMjWFpgrp30Zpo4gojUNwYg4kosFQG9gIpENdu3beifwCUxoSYiLjysYFBdIeJiQkoa+MDV4aNc4+5k4JlOqVKyzx6+ZJJ2nPnnnO/TnPndYEjWgsKs5idLVwAaICAYwKZLzq59y0nandPXwWpBQBt5dA2hPuLK+Mvw6jPEUlq2kBq0e4pXG8JUTtYcofjEDwJQ5YjlAxVliOWDE2WYyAZiizHRPLQZTlGkocqyyFJbgPYCIhvlNuCZOe9nHEStetIMnATwFpA25pidQ3Ar4C2pp5nudEEQz35K/UkZ5zcq1r9S0uTSwwM7HdkvRpRit7OPjpBQo8PKrmD3qd81INk23QNXSsyUYvciwDaA5q869h/kdzB21e4v4ZsO6nfHZGJuqQ2AShf+MAX616fYFlFYula0YiWliY2QLhXIftNSG40ckei++ocAL6XQ0rXKK6OfYp0Miou5+7DtTKi0JtKuem55YnXjebUORRSaZ1T5/ZqNEgKTaD8azf0i/spOaM/AbxI1P1oHGAYAsMQGIbAMASGITAMgWEIDENgGALDEBiGwDAEhiGkKr+MdE13KnZt/VmEZudWcm+RIEb2Gf/uEbUv57sUq2WARvVGBGeou3AJCaHe+Hl3T4Uh/byroq9F7MWSQZ3x8984nazqLDjdrHEI8NUfI6Evzcpfb/yMkLAUz+kHhxUhF+TqWChwWIVm3oyviiArwEO9EVT3rDP5Lqz6KYRIeRaMZCZnGALDEBiGwDAEhiEwDBQVf6PsvaSKNTXGKlWiQrLl34uANJJDJiD2o0qUJHDVyHm7p3AHMWc4mx8j4Jw/LoL1qmWstzofnLUs+Vgj1wcB1mnvtWpc/q6ZIEkNgzMzzvh61Xrd4Wx+UUB9aA2eFp3cYOCsK25qCoB+AZtoCNhScO9Wxtj/5lqxGkiyLAFbLqvBkjO1ue95VC9wshQ6QHiGhCGCBRduh3b4rzX1I9nptILbJ6AzBJxCDNFPLpjos0vqubdK5giYwR++V0S7PuXU2AAAAABJRU5ErkJggg==" alt="Export"></button>
+        <button class="tool-btn" onclick="exportJSONFile()" title="Save"><span class="tool-icon-text">&#8681;</span></button>
+        <button class="tool-btn" onclick="triggerImportJSON()" title="Load"><span class="tool-icon-text">&#8679;</span></button>
+      </div>
+      <input type="file" id="import-file-input" accept=".json" style="display:none">
+    </div>
+    <aside class="sidebar" id="right-sidebar"></aside>
+  </main>
+</div>
+
+<div id="popup-overlay">
+  <div id="popup-box">
+    <h2 id="pop-title"></h2>
+    <p id="pop-msg"></p>
+    <div class="pop-btns" id="pop-btns"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTS
+   ===================================================================== */
+const LINE_COLORS = ['#00aedb','#a200ff','#f47835','#d41243','#8ec127'];
+const SVG_W = 580, SVG_H = 560;
+const PL = 52, PR = 16, PT = 16, PB = 48;
+const GW = SVG_W - PL - PR;   // grid pixel width
+const GH = SVG_H - PT - PB;   // grid pixel height
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+let state = {
+  elements: [],
+  selectedId: null,
+  selectedIds: new Set(),
+  mode: 'select',      // select | point | line | curve
+  lineFirstId: null,
+  xScale: 10,
+  yScale: 10,
+  gridColor: '#e0e0e0',
+  bgColor: '#ffffff',
+  xLabel: 'X',
+  yLabel: 'Y',
+  showGrid: true,
+  xTicks: {enabled:false, start:0, end:10, step:1},
+  yTicks: {enabled:false, start:0, end:10, step:1},
+  nextId: 1,
+  _mousePos: null,
+  _crosshair: null,
+};
+
+/* =====================================================================
+   UNDO / REDO
+   ===================================================================== */
+let undoStack = [];
+let redoStack = [];
+let clipboard = null;
+const MAX_UNDO = 60;
+const SNAPSHOT_KEYS = ['elements','xScale','yScale','gridColor','bgColor','xLabel','yLabel','showGrid','xTicks','yTicks','nextId'];
+function snapshotState() {
+  const snap = {};
+  SNAPSHOT_KEYS.forEach(k => snap[k] = state[k]);
+  return JSON.stringify(snap);
+}
+function pushUndo() {
+  undoStack.push(snapshotState());
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
+}
+function restoreSnapshot(json) {
+  const snap = JSON.parse(json);
+  Object.assign(state, snap);
+  clearSelection();
+  render();
+}
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(snapshotState());
+  restoreSnapshot(undoStack.pop());
+}
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(snapshotState());
+  restoreSnapshot(redoStack.pop());
+}
+
+/* =====================================================================
+   AUTOSAVE (localStorage)
+   ===================================================================== */
+const AUTOSAVE_KEY = 'cruxplot-autosave-v1';
+let autoSaveTimer = null;
+function autoSave() {
+  try { localStorage.setItem(AUTOSAVE_KEY, snapshotState()); } catch(e) {}
+}
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(autoSave, 500);
+}
+function tryAutoRestore() {
+  try {
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (saved) { Object.assign(state, JSON.parse(saved)); return true; }
+  } catch(e) {}
+  return false;
+}
+
+/* =====================================================================
+   COORDINATE TRANSFORMS
+   ===================================================================== */
+function econToSVG(ex, ey) {
+  return {
+    x: PL + (ex / state.xScale) * GW,
+    y: (SVG_H - PB) - (ey / state.yScale) * GH
+  };
+}
+function svgToEcon(sx, sy) {
+  return {
+    x: (sx - PL) / GW * state.xScale,
+    y: ((SVG_H - PB) - sy) / GH * state.yScale
+  };
+}
+function clampEcon(ex, ey) {
+  return {
+    x: Math.max(0, Math.min(state.xScale, ex)),
+    y: Math.max(0, Math.min(state.yScale, ey))
+  };
+}
+function inBoundsEcon(ex, ey) {
+  return ex>=-1e-9 && ex<=state.xScale+1e-9 && ey>=-1e-9 && ey<=state.yScale+1e-9;
+}
+function rotatePointAround(px, py, cx, cy, angleDeg) {
+  const rad=angleDeg*Math.PI/180, cos=Math.cos(rad), sin=Math.sin(rad);
+  const dx=px-cx, dy=py-cy;
+  return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
+}
+function rotateElementBy(elem, deg) {
+  if (elem.type==='line') {
+    const a=state.elements.find(x=>x.id===elem.p1Id);
+    const b=state.elements.find(x=>x.id===elem.p2Id);
+    if (!a||!b) return;
+    const cx=(a.ex+b.ex)/2, cy=(a.ey+b.ey)/2;
+    const na=rotatePointAround(a.ex,a.ey,cx,cy,deg);
+    const nb=rotatePointAround(b.ex,b.ey,cx,cy,deg);
+    if (!inBoundsEcon(na.x,na.y) || !inBoundsEcon(nb.x,nb.y)) return;
+    a.ex=na.x; a.ey=na.y; b.ex=nb.x; b.ey=nb.y;
+  } else if (elem.type==='curve') {
+    const cx=(elem.x1+elem.x2)/2, cy=(elem.y1+elem.y2)/2;
+    const n1=rotatePointAround(elem.x1,elem.y1,cx,cy,deg);
+    const n2=rotatePointAround(elem.x2,elem.y2,cx,cy,deg);
+    if (!inBoundsEcon(n1.x,n1.y) || !inBoundsEcon(n2.x,n2.y)) return;
+    elem.x1=n1.x; elem.y1=n1.y; elem.x2=n2.x; elem.y2=n2.y;
+    if (elem.cpx!==undefined) {
+      const nc=rotatePointAround(elem.cpx,elem.cpy,cx,cy,deg);
+      elem.cpx=nc.x; elem.cpy=nc.y;
+    }
+  }
+}
+function snapToGrid(ex, ey) {
+  return {
+    x: Math.round(ex),
+    y: Math.round(ey)
+  };
+}
+function formatTickVal(v) {
+  return Number(v.toFixed(4)).toString();
+}
+function isInGrid(sx, sy) {
+  return sx >= PL && sx <= SVG_W - PR && sy >= PT && sy <= SVG_H - PB;
+}
+
+/* =====================================================================
+   COLOUR HELPERS
+   ===================================================================== */
+function nextColor() {
+  const used = new Set(state.elements.map(e => e.color));
+  for (const c of LINE_COLORS) if (!used.has(c)) return c;
+  return LINE_COLORS[state.elements.length % LINE_COLORS.length];
+}
+
+/* =====================================================================
+   ID
+   ===================================================================== */
+function uid() { return state.nextId++; }
+
+/* =====================================================================
+   BEZIER HELPERS  (quadratic)
+   ===================================================================== */
+function qBez(p0, cp, p1, t) {
+  const mt = 1 - t;
+  return {
+    x: mt*mt*p0.x + 2*mt*t*cp.x + t*t*p1.x,
+    y: mt*mt*p0.y + 2*mt*t*cp.y + t*t*p1.y
+  };
+}
+function qBezTan(p0, cp, p1, t) {
+  const mt = 1 - t;
+  return {
+    x: 2*mt*(cp.x - p0.x) + 2*t*(p1.x - cp.x),
+    y: 2*mt*(cp.y - p0.y) + 2*t*(p1.y - cp.y)
+  };
+}
+function curveCP(el) {
+  if (el.cpx !== undefined && el.cpy !== undefined) return econToSVG(el.cpx, el.cpy);
+  const p1 = econToSVG(el.x1, el.y1);
+  const p2 = econToSVG(el.x2, el.y2);
+  const mid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+  // convex → bow toward bottom-left (econ origin)
+  // concave → bow toward top-right
+  // increasing-convex → bow toward bottom-right (accelerating)
+  // increasing-concave → bow toward top-left (diminishing)
+  let cx, cy;
+  if (el.shape === 'convex') { cx=Math.min(p1.x,p2.x); cy=Math.max(p1.y,p2.y); }
+  else if (el.shape === 'increasing-convex') { cx=Math.max(p1.x,p2.x); cy=Math.max(p1.y,p2.y); }
+  else if (el.shape === 'increasing-concave') { cx=Math.min(p1.x,p2.x); cy=Math.min(p1.y,p2.y); }
+  else { cx=Math.max(p1.x,p2.x); cy=Math.min(p1.y,p2.y); } // concave
+  const curv = el.curvature !== undefined ? el.curvature : 0.72;
+  return { x: mid.x + (cx - mid.x)*curv, y: mid.y + (cy - mid.y)*curv };
+}
+/* Implicit conic (Ax^2+Bxy+Cy^2+Dx+Ey+F=0) that the curve's quadratic bezier
+   traces in true (x,y) econ space. Returns null when the three control
+   points are (near) collinear, i.e. the "curve" is really a straight line. */
+function curveConicCoeffs(el) {
+  const P0={x:el.x1,y:el.y1}, P2={x:el.x2,y:el.y2}, Pc=econCurveCP(el);
+  const a1=P0.x-2*Pc.x+P2.x, b1=2*(Pc.x-P0.x), c1=P0.x;
+  const a2=P0.y-2*Pc.y+P2.y, b2=2*(Pc.y-P0.y), c2=P0.y;
+  const denom=a2*b1-a1*b2;
+  if (Math.abs(denom) < 1e-7) return null;
+  const A_=a2/denom, B_=-a1/denom, C_=-(a2*c1-a1*c2)/denom;
+  // Substitute t back into whichever parametric equation (x or y) has the larger
+  // quadratic coefficient, to avoid the degenerate all-zero result when a1≈0.
+  if (Math.abs(a1) >= Math.abs(a2)) {
+    return {
+      A: a1*A_*A_,
+      B: 2*a1*A_*B_,
+      C: a1*B_*B_,
+      D: 2*a1*A_*C_ + b1*A_ - 1,
+      E: 2*a1*B_*C_ + b1*B_,
+      F: a1*C_*C_ + b1*C_ + c1
+    };
+  }
+  return {
+    A: a2*A_*A_,
+    B: 2*a2*A_*B_,
+    C: a2*B_*B_,
+    D: 2*a2*A_*C_ + b2*A_,
+    E: 2*a2*B_*C_ + b2*B_ - 1,
+    F: a2*C_*C_ + b2*C_ + c2
+  };
+}
+function econCurveCP(el) {
+  if (el.cpx !== undefined && el.cpy !== undefined) return { x: el.cpx, y: el.cpy };
+  const p1 = { x: el.x1, y: el.y1 };
+  const p2 = { x: el.x2, y: el.y2 };
+  const mid = { x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2 };
+  let cx, cy;
+  if (el.shape === 'convex') { cx=Math.min(p1.x,p2.x); cy=Math.min(p1.y,p2.y); }
+  else if (el.shape === 'increasing-convex') { cx=Math.max(p1.x,p2.x); cy=Math.min(p1.y,p2.y); }
+  else if (el.shape === 'increasing-concave') { cx=Math.min(p1.x,p2.x); cy=Math.max(p1.y,p2.y); }
+  else { cx=Math.max(p1.x,p2.x); cy=Math.max(p1.y,p2.y); } // concave
+  const curv = el.curvature !== undefined ? el.curvature : 0.72;
+  return { x: mid.x + (cx - mid.x)*curv, y: mid.y + (cy - mid.y)*curv };
+}
+
+/* =====================================================================
+   SHADED REGIONS
+   ===================================================================== */
+function resolveBound(id) {
+  if (id==='xaxis'||id==='yaxis') return id;
+  return state.elements.find(e=>e.id===id);
+}
+function isShadeable(id) {
+  if (id==='xaxis'||id==='yaxis') return true;
+  const e=state.elements.find(x=>x.id===id);
+  return !!e && (e.type==='line'||e.type==='curve');
+}
+function elemXRangeEcon(e) {
+  if (e.type==='line') {
+    const a=state.elements.find(p=>p.id===e.p1Id), b=state.elements.find(p=>p.id===e.p2Id);
+    if (!a||!b) return null;
+    return [Math.min(a.ex,b.ex), Math.max(a.ex,b.ex)];
+  }
+  if (e.type==='curve') return [Math.min(e.x1,e.x2), Math.max(e.x1,e.x2)];
+  return null;
+}
+function elemYRangeEcon(e) {
+  if (e.type==='line') {
+    const a=state.elements.find(p=>p.id===e.p1Id), b=state.elements.find(p=>p.id===e.p2Id);
+    if (!a||!b) return null;
+    return [Math.min(a.ey,b.ey), Math.max(a.ey,b.ey)];
+  }
+  if (e.type==='curve') return [Math.min(e.y1,e.y2), Math.max(e.y1,e.y2)];
+  return null;
+}
+function curveSamplesEcon(e) {
+  const P0={x:e.x1,y:e.y1}, P2={x:e.x2,y:e.y2}, Pc=econCurveCP(e);
+  const N=100, pts=[];
+  for (let i=0;i<=N;i++) {
+    const t=i/N, mt=1-t;
+    pts.push({x:mt*mt*P0.x+2*mt*t*Pc.x+t*t*P2.x, y:mt*mt*P0.y+2*mt*t*Pc.y+t*t*P2.y});
+  }
+  return pts;
+}
+function yAtX(boundRef, x) {
+  if (boundRef==='xaxis') return 0;
+  if (boundRef==='yaxis') return null;
+  const e=boundRef;
+  if (e.type==='line') {
+    const a=state.elements.find(p=>p.id===e.p1Id), b=state.elements.find(p=>p.id===e.p2Id);
+    if (!a||!b) return null;
+    if (Math.abs(b.ex-a.ex)<1e-9) return null;
+    const t=(x-a.ex)/(b.ex-a.ex);
+    if (t<-0.001||t>1.001) return null;
+    return a.ey+(b.ey-a.ey)*t;
+  }
+  if (e.type==='curve') {
+    const pts=curveSamplesEcon(e).sort((p,q)=>p.x-q.x);
+    if (x<pts[0].x-1e-6 || x>pts[pts.length-1].x+1e-6) return null;
+    for (let i=0;i<pts.length-1;i++) {
+      if (x>=pts[i].x && x<=pts[i+1].x) {
+        const dxp=pts[i+1].x-pts[i].x;
+        const t=dxp>1e-9 ? (x-pts[i].x)/dxp : 0;
+        return pts[i].y+(pts[i+1].y-pts[i].y)*t;
+      }
+    }
+    return null;
+  }
+  return null;
+}
+function xAtY(boundRef, y) {
+  if (boundRef==='yaxis') return 0;
+  if (boundRef==='xaxis') return null;
+  const e=boundRef;
+  if (e.type==='line') {
+    const a=state.elements.find(p=>p.id===e.p1Id), b=state.elements.find(p=>p.id===e.p2Id);
+    if (!a||!b) return null;
+    if (Math.abs(b.ey-a.ey)<1e-9) return null;
+    const t=(y-a.ey)/(b.ey-a.ey);
+    if (t<-0.001||t>1.001) return null;
+    return a.ex+(b.ex-a.ex)*t;
+  }
+  if (e.type==='curve') {
+    const pts=curveSamplesEcon(e).sort((p,q)=>p.y-q.y);
+    if (y<pts[0].y-1e-6 || y>pts[pts.length-1].y+1e-6) return null;
+    for (let i=0;i<pts.length-1;i++) {
+      if (y>=pts[i].y && y<=pts[i+1].y) {
+        const dyp=pts[i+1].y-pts[i].y;
+        const t=dyp>1e-9 ? (y-pts[i].y)/dyp : 0;
+        return pts[i].x+(pts[i+1].x-pts[i].x)*t;
+      }
+    }
+    return null;
+  }
+  return null;
+}
+function computeShadePolygonEcon(shade) {
+  const A=resolveBound(shade.boundA), B=resolveBound(shade.boundB);
+  if (!A||!B) return null;
+  const useY = (A==='yaxis'||B==='yaxis');
+  const N=60, top=[], bot=[];
+  if (useY) {
+    const rA = A==='yaxis' ? [0,state.yScale] : elemYRangeEcon(A);
+    const rB = B==='yaxis' ? [0,state.yScale] : elemYRangeEcon(B);
+    if (!rA||!rB) return null;
+    const lo=Math.max(rA[0],rB[0]), hi=Math.min(rA[1],rB[1]);
+    if (hi<=lo) return null;
+    for (let i=0;i<=N;i++) {
+      const y=lo+(hi-lo)*i/N;
+      const xA=xAtY(A,y), xB=xAtY(B,y);
+      if (xA==null||xB==null) continue;
+      top.push({x:xA,y}); bot.push({x:xB,y});
+    }
+  } else {
+    const rA = A==='xaxis' ? [0,state.xScale] : elemXRangeEcon(A);
+    const rB = B==='xaxis' ? [0,state.xScale] : elemXRangeEcon(B);
+    if (!rA||!rB) return null;
+    const lo=Math.max(rA[0],rB[0]), hi=Math.min(rA[1],rB[1]);
+    if (hi<=lo) return null;
+    for (let i=0;i<=N;i++) {
+      const x=lo+(hi-lo)*i/N;
+      const yA=yAtX(A,x), yB=yAtX(B,x);
+      if (yA==null||yB==null) continue;
+      top.push({x,y:yA}); bot.push({x,y:yB});
+    }
+  }
+  if (top.length<2) return null;
+  return top.concat(bot.reverse());
+}
+function addShade(boundA, boundB) {
+  pushUndo();
+  const id=uid();
+  state.elements.push({id,type:'shade',boundA,boundB,color:nextColor(),opacity:0.3,label:''});
+  state.selectedId=id; state.selectedIds=new Set([id]);
+  render();
+}
+function drawShade(elem) {
+  const poly=computeShadePolygonEcon(elem);
+  if (!poly) return;
+  const sel=state.selectedIds.has(elem.id);
+  const svgPts=poly.map(p=>econToSVG(p.x,p.y));
+  const d='M'+svgPts.map(p=>`${p.x},${p.y}`).join('L')+'Z';
+  const g=el('g',{'data-id':elem.id,cursor:'pointer'});
+  g.appendChild(el('path',{d,fill:elem.color||'#00aedb','fill-opacity':elem.opacity!==undefined?elem.opacity:0.3,stroke:'none','pointer-events':'all'}));
+  if (sel) {
+    g.appendChild(el('path',{d,fill:'none',stroke:'rgba(30,130,255,0.7)','stroke-width':2,'pointer-events':'none'}));
+  }
+  if (elem.label) {
+    const cx=svgPts.reduce((s,p)=>s+p.x,0)/svgPts.length;
+    const cy=svgPts.reduce((s,p)=>s+p.y,0)/svgPts.length;
+    const lox=elem.lox!==undefined?elem.lox:0, loy=elem.loy!==undefined?elem.loy:0;
+    const lx=cx+lox, ly=cy+loy;
+    const lbl=txt('text',{x:lx,y:ly,'class':'svg-lbl','font-size':13,fill:elem.color||'#00aedb','text-anchor':'middle',
+      style:'cursor:move;pointer-events:all',...labelAttrs(elem,lx,ly)},elem.label);
+    lbl.addEventListener('mousedown',e=>startLabelDrag(elem,0,0,e));
+    g.appendChild(lbl);
+  }
+  g.addEventListener('click',e=>{if(state.mode!=='select')return;e.stopPropagation();selectEl(elem.id)});
+  svg.appendChild(g);
+}
+function curvePath(el) {
+  const p1 = econToSVG(el.x1, el.y1);
+  const p2 = econToSVG(el.x2, el.y2);
+  const cp = curveCP(el);
+  return `M${p1.x},${p1.y} Q${cp.x},${cp.y} ${p2.x},${p2.y}`;
+}
+
+/* =====================================================================
+   SVG NAMESPACE HELPER
+   ===================================================================== */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs={}) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+  return e;
+}
+function txt(tag, attrs, content) {
+  const e = el(tag, attrs);
+  e.textContent = content;
+  return e;
+}
+
+/* =====================================================================
+   MAIN RENDER
+   ===================================================================== */
+const svg = document.getElementById('main-svg');
+svg.setAttribute('width', SVG_W);
+svg.setAttribute('height', SVG_H);
+svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
+function render() {
+  renderCanvas();
+  renderLeftSidebar();
+  syncToolbarButtons();
+}
+
+function renderCanvas() {
+  svg.innerHTML = '';
+
+  //  background
+  svg.appendChild(el('rect',{x:0,y:0,width:SVG_W,height:SVG_H,fill:'transparent'}));
+  svg.appendChild(el('rect',{x:PL,y:PT,width:GW,height:GH,fill:state.bgColor}));
+
+  //  grid lines
+  if (state.showGrid) {
+    const g = el('g');
+    const xs = state.xScale;
+    const ys = state.yScale;
+    for (let i=0; i<=xs; i++) {
+      const x = PL + i/state.xScale*GW;
+      g.appendChild(el('line',{x1:x,y1:PT,x2:x,y2:SVG_H-PB,stroke:state.gridColor,'stroke-width':1}));
+    }
+    for (let i=0; i<=ys; i++) {
+      const y = PT + i/state.yScale*GH;
+      g.appendChild(el('line',{x1:PL,y1:y,x2:SVG_W-PR,y2:y,stroke:state.gridColor,'stroke-width':1}));
+    }
+    svg.appendChild(g);
+  }
+
+  // Bold axis lines (left & bottom) — selection highlight drawn first, underneath
+  if (state.selectedIds.has('xaxis')) {
+    svg.appendChild(el('line',{x1:PL,y1:SVG_H-PB,x2:SVG_W-PR,y2:SVG_H-PB,stroke:'rgba(30,130,255,0.35)','stroke-width':9,'stroke-linecap':'round'}));
+  }
+  if (state.selectedIds.has('yaxis')) {
+    svg.appendChild(el('line',{x1:PL,y1:PT,x2:PL,y2:SVG_H-PB,stroke:'rgba(30,130,255,0.35)','stroke-width':9,'stroke-linecap':'round'}));
+  }
+  svg.appendChild(el('line',{x1:PL,y1:SVG_H-PB,x2:SVG_W-PR,y2:SVG_H-PB,stroke:'#222','stroke-width':2}));
+  svg.appendChild(el('line',{x1:PL,y1:PT,x2:PL,y2:SVG_H-PB,stroke:'#222','stroke-width':2}));
+
+  //  axis arrows
+  svg.appendChild(el('polygon',{
+    points:`${SVG_W-PR},${SVG_H-PB} ${SVG_W-PR-7},${SVG_H-PB-4} ${SVG_W-PR-7},${SVG_H-PB+4}`,
+    fill:'#222'
+  }));
+  svg.appendChild(el('polygon',{
+    points:`${PL},${PT} ${PL-4},${PT+7} ${PL+4},${PT+7}`,
+    fill:'#222'
+  }));
+
+  //  axis labels
+  const xLabelY = state.xTicks.enabled ? SVG_H-PB+31 : SVG_H-PB+18;
+  svg.appendChild(txt('text',{
+    x:SVG_W-PR-4, y:xLabelY,
+    'text-anchor':'end','font-family':'Prompt,sans-serif',
+    'font-size':14,'font-style':'italic',fill:'#333'
+  }, state.xLabel));
+  const yLabelX = state.yTicks.enabled ? 11 : 24;
+  svg.appendChild(txt('text',{
+    x:yLabelX,y:SVG_H/2,'text-anchor':'middle',
+    'font-family':'Prompt,sans-serif','font-size':14,'font-style':'italic',fill:'#333',
+    transform:`rotate(-90,${yLabelX},${SVG_H/2})`
+  }, state.yLabel));
+
+  //  origin (hidden when custom tick labels are shown, to avoid overlap)
+  if (!state.xTicks.enabled && !state.yTicks.enabled) {
+    svg.appendChild(txt('text',{
+      x:PL-6,y:SVG_H-PB+5,'text-anchor':'middle',
+      'font-size':11,fill:'#777','font-family':'Prompt,sans-serif'
+    },'O'));
+  }
+
+  //  axis tick labels
+  if (state.xTicks.enabled) {
+    const {start,end,step}=state.xTicks;
+    if (step>0 && end>start) {
+      const n=Math.floor((end-start)/step+1e-9);
+      for (let i=0;i<=n;i++) {
+        const val=start+i*step;
+        const ex=(val-start)/(end-start)*state.xScale;
+        const sx=econToSVG(ex,0).x;
+        svg.appendChild(el('line',{x1:sx,y1:SVG_H-PB,x2:sx,y2:SVG_H-PB+5,stroke:'#222','stroke-width':1}));
+        svg.appendChild(txt('text',{x:sx,y:SVG_H-PB+17,'text-anchor':'middle',
+          'font-size':10,fill:'#555','font-family':'Prompt,sans-serif'}, formatTickVal(val)));
+      }
+    }
+  }
+  if (state.yTicks.enabled) {
+    const {start,end,step}=state.yTicks;
+    if (step>0 && end>start) {
+      const n=Math.floor((end-start)/step+1e-9);
+      for (let i=0;i<=n;i++) {
+        const val=start+i*step;
+        const ey=(val-start)/(end-start)*state.yScale;
+        const sy=econToSVG(0,ey).y;
+        svg.appendChild(el('line',{x1:PL-5,y1:sy,x2:PL,y2:sy,stroke:'#222','stroke-width':1}));
+        svg.appendChild(txt('text',{x:PL-8,y:sy+3,'text-anchor':'end',
+          'font-size':10,fill:'#555','font-family':'Prompt,sans-serif'}, formatTickVal(val)));
+      }
+    }
+  }
+
+  //  keep tangent-curves synced with the line they're attached to
+  state.elements.forEach(elem=>{
+    if (elem.type==='curve' && elem.lineId!==undefined) resolveTangentCurveGeometry(elem);
+  });
+
+  //  shaded regions (drawn first, behind everything else)
+  state.elements.filter(e=>e.type==='shade').forEach(drawShade);
+
+  //  elements (z-order: curves, lines, tangents, points)
+  const order = ['curve','line','tangent','point','text'];
+  const sorted = [...state.elements].filter(e=>e.type!=='shade').sort((a,b)=>order.indexOf(a.type)-order.indexOf(b.type));
+  sorted.forEach(drawElement);
+
+  //  line preview
+  if (state.mode==='line' && state.lineFirstId && state._mousePos) {
+    const fp = state.elements.find(e=>e.id===state.lineFirstId);
+    if (fp && fp.type==='point') {
+      const p1 = econToSVG(fp.ex, fp.ey);
+      const g = el('g',{opacity:0.5,'pointer-events':'none'});
+      g.appendChild(el('line',{x1:p1.x,y1:p1.y,x2:state._mousePos.x,y2:state._mousePos.y,
+        stroke:'#888','stroke-width':1.5,'stroke-dasharray':'6 4'}));
+      svg.appendChild(g);
+    }
+  }
+
+  //  snap crosshair
+  if (state._crosshair && isInGrid(state._crosshair.x, state._crosshair.y)) {
+    const {x,y}=state._crosshair;
+    const g=el('g',{opacity:0.4,'pointer-events':'none'});
+    g.appendChild(el('line',{x1:x,y1:PT,x2:x,y2:SVG_H-PB,stroke:'#5c3c92','stroke-width':1,'stroke-dasharray':'4 3'}));
+    g.appendChild(el('line',{x1:PL,y1:y,x2:SVG_W-PR,y2:y,stroke:'#5c3c92','stroke-width':1,'stroke-dasharray':'4 3'}));
+    svg.appendChild(g);
+  }
+
+  //  marquee (drag-select) rectangle
+  if (marquee) {
+    const x=Math.min(marquee.startSP.x,marquee.curSP.x), y=Math.min(marquee.startSP.y,marquee.curSP.y);
+    const w=Math.abs(marquee.curSP.x-marquee.startSP.x), h=Math.abs(marquee.curSP.y-marquee.startSP.y);
+    svg.appendChild(el('rect',{x,y,width:w,height:h,fill:'rgba(92,60,146,0.15)',stroke:'#5c3c92','stroke-width':1,'stroke-dasharray':'4 3','pointer-events':'none'}));
+  }
+
+  refreshEquationBox();
+  scheduleAutoSave();
+}
+
+/* =====================================================================
+   LABEL HELPERS
+   ===================================================================== */
+function labelAttrs(elem, x, y) {
+  const rot = elem.labelRotation || 0;
+  return rot ? {transform:`rotate(${rot},${x},${y})`} : {};
+}
+
+/* =====================================================================
+   DRAW ONE ELEMENT
+   ===================================================================== */
+function drawElement(elem) {
+  const sel = state.selectedIds.has(elem.id);
+
+  if (elem.type === 'curve') {
+    const isTangentCurve = elem.lineId !== undefined;
+    const g = el('g',{'data-id':elem.id,cursor:isTangentCurve?'ew-resize':'move','pointer-events':'all'});
+    const d = curvePath(elem);
+    const col = elem.color||'#00aedb';
+    const th = elem.thickness||2;
+    const da = elem.dotted ? '8 5' : 'none';
+
+    if (sel) {
+      g.appendChild(el('path',{d,stroke:'rgba(30,130,255,0.28)','stroke-width':th+10,fill:'none','stroke-linecap':'round'}));
+    }
+    // Hit area (also drives whole-curve dragging / sliding)
+    g.appendChild(el('path',{d,stroke:'rgba(0,0,0,0)','stroke-width':14,fill:'none','pointer-events':'stroke'}));
+    g.appendChild(el('path',{d,stroke:col,'stroke-width':th,fill:'none','stroke-dasharray':da,'stroke-linecap':'round'}));
+    g.addEventListener('mousedown',handleMousedown);
+
+    // Endpoint handles (not for tangent-curves — their shape is fixed by the tangency constraint)
+    const p1s = econToSVG(elem.x1,elem.y1), p2s = econToSVG(elem.x2,elem.y2);
+    if (!isTangentCurve) {
+      [[p1s,'h1'],[p2s,'h2']].forEach(([p,hid])=>{
+        const hg = el('g',{'data-id':elem.id,'data-h':hid,cursor:'grab'});
+        hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:8,fill:'rgba(255,255,255,0.8)',stroke:col,'stroke-width':1.5}));
+        hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:3,fill:col}));
+        hg.addEventListener('mousedown',handleMousedown);
+        g.appendChild(hg);
+      });
+    }
+
+    if (elem.label) {
+      const mid = qBez(p1s, curveCP(elem), p2s, 0.5);
+      const lox=elem.lox!==undefined?elem.lox:10, loy=elem.loy!==undefined?elem.loy:-7;
+      const lx=mid.x+lox, ly=mid.y+loy;
+      const lbl=txt('text',{x:lx,y:ly,
+        'class':'svg-lbl','font-size':13,fill:elem.labelColor||col,
+        style:'cursor:move;pointer-events:all',...labelAttrs(elem,lx,ly)
+      },elem.label);
+      lbl.addEventListener('mousedown',e=>startLabelDrag(elem,10,-7,e));
+      g.appendChild(lbl);
+    }
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    svg.appendChild(g);
+
+  } else if (elem.type === 'line') {
+    const a = state.elements.find(e=>e.id===elem.p1Id);
+    const b = state.elements.find(e=>e.id===elem.p2Id);
+    if (!a||!b) return;
+    const p1=econToSVG(a.ex,a.ey), p2=econToSVG(b.ex,b.ey);
+    const col=elem.color||'#00aedb', th=elem.thickness||2;
+    const da=elem.dotted?'8 5':'none';
+
+    const g=el('g',{'data-id':elem.id,cursor:'move','pointer-events':'all'});
+    if (sel) {
+      g.appendChild(el('line',{x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,
+        stroke:'rgba(30,130,255,0.28)','stroke-width':th+10,'stroke-linecap':'round'}));
+    }
+    g.appendChild(el('line',{x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,stroke:'rgba(0,0,0,0)','stroke-width':14,'pointer-events':'stroke'}));
+    g.appendChild(el('line',{x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,
+      stroke:col,'stroke-width':th,'stroke-dasharray':da,'stroke-linecap':'round'}));
+    g.addEventListener('mousedown',handleMousedown);
+
+    if (elem.label) {
+      const lox=elem.lox!==undefined?elem.lox:8, loy=elem.loy!==undefined?elem.loy:-6;
+      const mx=(p1.x+p2.x)/2+lox, my=(p1.y+p2.y)/2+loy;
+      const lbl=txt('text',{x:mx,y:my,'class':'svg-lbl','font-size':13,fill:elem.labelColor||col,
+        style:'cursor:move;pointer-events:all',...labelAttrs(elem,mx,my)},elem.label);
+      lbl.addEventListener('mousedown',e=>startLabelDrag(elem,8,-6,e));
+      g.appendChild(lbl);
+    }
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    svg.appendChild(g);
+
+  } else if (elem.type === 'tangent') {
+    const curve=state.elements.find(e=>e.id===elem.curveId);
+    if (!curve) return;
+    const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2);
+    const cp=curveCP(curve);
+    const pos=qBez(p1s,cp,p2s,elem.t);
+    const tan=qBezTan(p1s,cp,p2s,elem.t);
+    const len=Math.hypot(tan.x,tan.y)||1;
+    const nx=tan.x/len, ny=tan.y/len;
+    const extNeg=elem.extNeg!==undefined?elem.extNeg:150;
+    const extPos=elem.extPos!==undefined?elem.extPos:150;
+    const endA={x:pos.x-nx*extNeg,y:pos.y-ny*extNeg};
+    const endB={x:pos.x+nx*extPos,y:pos.y+ny*extPos};
+    const col=elem.color||'#d41243', th=elem.thickness||2;
+    const da=elem.dotted?'8 5':'none';
+
+    const g=el('g',{'data-id':elem.id,cursor:'pointer'});
+    if (sel) {
+      g.appendChild(el('line',{x1:endA.x,y1:endA.y,x2:endB.x,y2:endB.y,
+        stroke:'rgba(30,130,255,0.28)','stroke-width':th+10,'stroke-linecap':'round'}));
+    }
+    g.appendChild(el('line',{x1:endA.x,y1:endA.y,x2:endB.x,y2:endB.y,
+      stroke:col,'stroke-width':th,'stroke-dasharray':da,'stroke-linecap':'round'}));
+
+    // Endpoint handles (elongate/contract)
+    [[endA,'eA'],[endB,'eB']].forEach(([p,hid])=>{
+      const hg=el('g',{'data-id':elem.id,'data-h':hid,cursor:'ew-resize'});
+      hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:7,fill:'rgba(255,255,255,0.8)',stroke:col,'stroke-width':1.5}));
+      hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:2.5,fill:col}));
+      hg.addEventListener('mousedown',handleMousedown);
+      g.appendChild(hg);
+    });
+
+    // Draggable point on curve
+    const dot=el('circle',{cx:pos.x,cy:pos.y,r:5.5,fill:col,stroke:'#fff','stroke-width':1.5,cursor:'ew-resize'});
+    dot.addEventListener('mousedown',handleMousedown);
+    dot.setAttribute('data-id',elem.id);
+    dot.setAttribute('data-h','t');
+    g.appendChild(dot);
+
+    if (elem.label) {
+      const lox=elem.lox!==undefined?elem.lox:8, loy=elem.loy!==undefined?elem.loy:-8;
+      const lx=pos.x+lox, ly=pos.y+loy;
+      const lbl=txt('text',{x:lx,y:ly,'class':'svg-lbl','font-size':13,fill:elem.labelColor||col,
+        style:'cursor:move;pointer-events:all',...labelAttrs(elem,lx,ly)},elem.label);
+      lbl.addEventListener('mousedown',e=>startLabelDrag(elem,8,-8,e));
+      g.appendChild(lbl);
+    }
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    svg.appendChild(g);
+
+  } else if (elem.type === 'point') {
+    const p=econToSVG(elem.ex,elem.ey);
+    const col=elem.color||'#333', sz=elem.size||5;
+
+    const g=el('g',{'data-id':elem.id,cursor:'move'});
+    if (sel) {
+      g.appendChild(el('circle',{cx:p.x,cy:p.y,r:sz+7,fill:'rgba(30,130,255,0.18)',stroke:'rgba(30,130,255,0.5)','stroke-width':1.5}));
+    }
+    g.appendChild(el('circle',{cx:p.x,cy:p.y,r:sz,fill:col,stroke:'white','stroke-width':1.8}));
+    if (elem.label) {
+      const ox=elem.lox!==undefined?elem.lox:9, oy=elem.loy!==undefined?elem.loy:-9;
+      const lx=p.x+ox, ly=p.y+oy;
+      const lbl=txt('text',{x:lx,y:ly,'class':'svg-lbl','font-size':13,fill:elem.labelColor||col,
+        style:'cursor:move;pointer-events:all',...labelAttrs(elem,lx,ly)},elem.label);
+      lbl.addEventListener('mousedown',e=>startLabelDrag(elem,9,-9,e));
+      g.appendChild(lbl);
+    }
+    g.addEventListener('mousedown',handleMousedown);
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    svg.appendChild(g);
+
+  } else if (elem.type === 'text') {
+    const p=econToSVG(elem.ex,elem.ey);
+    const g=el('g',{'data-id':elem.id,cursor:'move'});
+    const rot=elem.labelRotation||0;
+    const attrs={x:p.x,y:p.y,'font-size':elem.fontSize||14,fill:elem.color||'#222',
+      style:'cursor:move;pointer-events:all'};
+    if (rot) attrs.transform=`rotate(${rot},${p.x},${p.y})`;
+    if (sel) {
+      const rectAttrs={x:p.x-4,y:p.y-(elem.fontSize||14),width:((elem.text||'').length*(elem.fontSize||14)*0.6)+8,height:(elem.fontSize||14)*1.4,
+        fill:'rgba(30,130,255,0.15)',stroke:'rgba(30,130,255,0.5)','stroke-width':1,rx:3};
+      if (rot) rectAttrs.transform=`rotate(${rot},${p.x},${p.y})`;
+      g.appendChild(el('rect',rectAttrs));
+    }
+    const t=txt('text',attrs,elem.text||'Text');
+    g.appendChild(t);
+    g.addEventListener('mousedown',handleMousedown);
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    svg.appendChild(g);
+  }
+}
+
+/* =====================================================================
+   DRAG HANDLING
+   ===================================================================== */
+let drag = null;
+let marquee = null;
+
+function handleMousedown(e) {
+  if (e.button !== 0) return;
+  if (state.mode !== 'select') return;
+  e.stopPropagation();
+  const sp = getSVGPt(e);
+  const tid = parseInt(e.currentTarget.getAttribute('data-id'));
+  const h = e.currentTarget.getAttribute('data-h');
+  const elem = state.elements.find(x=>x.id===tid);
+  if (!elem) return;
+
+  if (elem.type==='point' || elem.type==='text') {
+    drag={type:'point', id:tid, startSP:sp, origEx:elem.ex, origEy:elem.ey};
+  } else if (elem.type==='curve' && h) {
+    drag={type:'curve-h', id:tid, h, startSP:sp,
+      ox1:elem.x1,oy1:elem.y1,ox2:elem.x2,oy2:elem.y2};
+  } else if (elem.type==='curve' && !h && elem.lineId!==undefined) {
+    drag={type:'tangentcurve-slide', id:tid};
+  } else if (elem.type==='curve' && !h) {
+    drag={type:'curve-body', id:tid, startSP:sp,
+      ox1:elem.x1,oy1:elem.y1,ox2:elem.x2,oy2:elem.y2,
+      ocpx:elem.cpx, ocpy:elem.cpy};
+  } else if (elem.type==='line' && !h) {
+    const a=state.elements.find(x=>x.id===elem.p1Id);
+    const b=state.elements.find(x=>x.id===elem.p2Id);
+    if (!a||!b) return;
+    drag={type:'line-body', id:tid, startSP:sp,
+      origAex:a.ex,origAey:a.ey,origBex:b.ex,origBey:b.ey};
+  } else if (elem.type==='tangent' && h==='t') {
+    drag={type:'tangent-t', id:tid, startSP:sp};
+  } else if (elem.type==='tangent' && (h==='eA'||h==='eB')) {
+    drag={type:'tangent-ext', id:tid, h};
+  }
+  selectEl(tid);
+  e.preventDefault();
+}
+
+function startLabelDrag(elem, defOx, defOy, e) {
+  if (e.button !== 0) return;
+  if (state.mode !== 'select') return;
+  e.stopPropagation();
+  const sp=getSVGPt(e);
+  drag={type:'label', id:elem.id, startSP:sp,
+    origLox: elem.lox!==undefined?elem.lox:defOx,
+    origLoy: elem.loy!==undefined?elem.loy:defOy};
+  selectEl(elem.id);
+  e.preventDefault();
+}
+
+/* =====================================================================
+   SNAPPING: grid / element points / intersections
+   ===================================================================== */
+function lineIntersect(p1,p2,p3,p4) {
+  const d1x=p2.x-p1.x, d1y=p2.y-p1.y;
+  const d2x=p4.x-p3.x, d2y=p4.y-p3.y;
+  const denom=d1x*d2y-d1y*d2x;
+  if (Math.abs(denom)<1e-9) return null;
+  const t=((p3.x-p1.x)*d2y-(p3.y-p1.y)*d2x)/denom;
+  const u=((p3.x-p1.x)*d1y-(p3.y-p1.y)*d1x)/denom;
+  if (t<0||t>1||u<0||u>1) return null;
+  return {x:p1.x+t*d1x, y:p1.y+t*d1y};
+}
+function polySegs(pts) {
+  const out=[];
+  for (let i=0;i<pts.length-1;i++) out.push([pts[i],pts[i+1]]);
+  return out;
+}
+function elemGeo(elem) {
+  if (elem.type==='line') {
+    const a=state.elements.find(x=>x.id===elem.p1Id);
+    const b=state.elements.find(x=>x.id===elem.p2Id);
+    if (!a||!b) return null;
+    return {kind:'segment', p1:econToSVG(a.ex,a.ey), p2:econToSVG(b.ex,b.ey)};
+  }
+  if (elem.type==='curve') {
+    const p1=econToSVG(elem.x1,elem.y1), p2=econToSVG(elem.x2,elem.y2);
+    const cp=curveCP(elem);
+    const pts=[];
+    for (let t=0;t<=1;t+=0.05) pts.push(qBez(p1,cp,p2,t));
+    return {kind:'poly', pts};
+  }
+  return null;
+}
+function findIntersections() {
+  const geos=state.elements.map(elemGeo).filter(Boolean);
+  const pts=[];
+  for (let i=0;i<geos.length;i++) {
+    for (let j=i+1;j<geos.length;j++) {
+      const A=geos[i], B=geos[j];
+      const segsA=A.kind==='segment'?[[A.p1,A.p2]]:polySegs(A.pts);
+      const segsB=B.kind==='segment'?[[B.p1,B.p2]]:polySegs(B.pts);
+      for (const [a1,a2] of segsA) {
+        for (const [b1,b2] of segsB) {
+          const ip=lineIntersect(a1,a2,b1,b2);
+          if (ip) pts.push(ip);
+        }
+      }
+    }
+  }
+  return pts;
+}
+function nearestPointOnSeg(px,py,ax,ay,bx,by) {
+  const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy;
+  if (!l2) return {x:ax,y:ay};
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));
+  return {x:ax+t*dx, y:ay+t*dy};
+}
+function computeSnapTarget(sx, sy, excludeId) {
+  // Object/intersection/continuous-on-line snap only (no grid fallback) — returns null if nothing nearby.
+  const r=svg.getBoundingClientRect();
+  const scale=r.width?r.width/SVG_W:1;
+  const thresh=20/scale;
+  let bestPt=null, bestD=thresh;
+  state.elements.forEach(pe=>{
+    if (pe.type!=='point' || pe.id===excludeId) return;
+    const p=econToSVG(pe.ex,pe.ey);
+    const d=Math.hypot(p.x-sx,p.y-sy);
+    if (d<bestD) { bestD=d; bestPt=p; }
+  });
+  findIntersections().forEach(p=>{
+    const d=Math.hypot(p.x-sx,p.y-sy);
+    if (d<bestD) { bestD=d; bestPt=p; }
+  });
+  // Continuous snap to the nearest point anywhere along a line or curve (no discrete increments).
+  state.elements.forEach(elem=>{
+    if (elem.id===excludeId) return;
+    if (elem.type==='line') {
+      const a=state.elements.find(x=>x.id===elem.p1Id);
+      const b=state.elements.find(x=>x.id===elem.p2Id);
+      if (!a||!b) return;
+      const p1=econToSVG(a.ex,a.ey), p2=econToSVG(b.ex,b.ey);
+      const proj=nearestPointOnSeg(sx,sy,p1.x,p1.y,p2.x,p2.y);
+      const d=Math.hypot(proj.x-sx,proj.y-sy);
+      if (d<bestD) { bestD=d; bestPt=proj; }
+    } else if (elem.type==='curve') {
+      const p1=econToSVG(elem.x1,elem.y1), p2=econToSVG(elem.x2,elem.y2);
+      const cp=curveCP(elem);
+      for (let t=0;t<=1;t+=0.01) {
+        const pt=qBez(p1,cp,p2,t);
+        const d=Math.hypot(pt.x-sx,pt.y-sy);
+        if (d<bestD) { bestD=d; bestPt=pt; }
+      }
+    }
+  });
+  return bestPt ? {x:bestPt.x, y:bestPt.y} : null;
+}
+function resolveSnap(sx, sy, e, excludeId) {
+  // Ctrl+Shift → snap to nearby points/intersections. Shift alone → snap to grid. Neither → raw position.
+  if (e.ctrlKey && e.shiftKey) {
+    return computeSnapTarget(sx, sy, excludeId) || {x:sx, y:sy};
+  }
+  if (e.shiftKey) {
+    const ep=svgToEcon(sx,sy);
+    const g=snapToGrid(ep.x,ep.y);
+    return econToSVG(g.x,g.y);
+  }
+  return {x:sx, y:sy};
+}
+
+svg.addEventListener('mousedown', e=>{
+  if (e.button !== 0) return;
+  if (state.mode !== 'select') return;
+  const sp = getSVGPt(e);
+  const near = nearestElement(sp.x, sp.y);
+  if (near) { selectEl(near); } else { clearSelection(); render(); }
+  marquee = { startSP: sp, curSP: sp };
+});
+
+svg.addEventListener('mousemove', e=>{
+  const sp=getSVGPt(e);
+  state._mousePos=sp;
+
+  if (marquee) {
+    marquee.curSP = sp;
+    renderCanvas();
+    return;
+  }
+
+  //  crosshair / snap preview target
+  let targetSVG=sp, excludeId=null;
+  let showCrosshair = (state.mode==='point' || (state.mode==='line' && state.lineFirstId)) && !drag;
+  if (drag && drag.type==='point') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (elem) {
+      const origSVG=econToSVG(drag.origEx,drag.origEy);
+      targetSVG={x:origSVG.x+(sp.x-drag.startSP.x), y:origSVG.y+(sp.y-drag.startSP.y)};
+    }
+    excludeId=drag.id;
+    showCrosshair=true;
+  } else if (drag && drag.type==='curve-h') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (elem) {
+      const isH1=drag.h==='h1';
+      const origPt=econToSVG(isH1?drag.ox1:drag.ox2, isH1?drag.oy1:drag.oy2);
+      targetSVG={x:origPt.x+(sp.x-drag.startSP.x), y:origPt.y+(sp.y-drag.startSP.y)};
+    }
+    showCrosshair=true;
+  }
+  if (showCrosshair && isInGrid(targetSVG.x,targetSVG.y)) {
+    state._crosshair = resolveSnap(targetSVG.x,targetSVG.y,e,excludeId);
+  } else {
+    state._crosshair = null;
+  }
+
+  if (!drag) {
+    if ((state.mode==='line' && state.lineFirstId) || state.mode==='point') renderCanvas();
+    return;
+  }
+  if (!drag._undoPushed) { pushUndo(); drag._undoPushed=true; }
+  e.preventDefault();
+
+  if (drag.type==='point') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (!elem) return;
+    const placeSVG = (e.shiftKey && state._crosshair) ? state._crosshair : targetSVG;
+    let ep=svgToEcon(placeSVG.x, placeSVG.y);
+    ep=clampEcon(ep.x,ep.y);
+    elem.ex=ep.x; elem.ey=ep.y;
+    renderCanvas();
+
+  } else if (drag.type==='curve-h') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (!elem) return;
+    const isH1=drag.h==='h1';
+    const placeSVG = (e.shiftKey && state._crosshair) ? state._crosshair : targetSVG;
+    let ep=svgToEcon(placeSVG.x, placeSVG.y);
+    ep=clampEcon(ep.x,ep.y);
+    if (isH1){elem.x1=ep.x;elem.y1=ep.y;}
+    else{elem.x2=ep.x;elem.y2=ep.y;}
+    renderCanvas();
+
+  } else if (drag.type==='line-body') {
+    const lineEl=state.elements.find(x=>x.id===drag.id);
+    if (!lineEl) return;
+    const a=state.elements.find(x=>x.id===lineEl.p1Id);
+    const b=state.elements.find(x=>x.id===lineEl.p2Id);
+    if (!a||!b) return;
+    const origA=econToSVG(drag.origAex,drag.origAey);
+    const origB=econToSVG(drag.origBex,drag.origBey);
+    const dx=sp.x-drag.startSP.x, dy=sp.y-drag.startSP.y;
+    let epA=svgToEcon(origA.x+dx, origA.y+dy);
+    let epB=svgToEcon(origB.x+dx, origB.y+dy);
+    if (e.shiftKey) { epA=snapToGrid(epA.x,epA.y); epB=snapToGrid(epB.x,epB.y); }
+    epA=clampEcon(epA.x,epA.y); epB=clampEcon(epB.x,epB.y);
+    a.ex=epA.x; a.ey=epA.y; b.ex=epB.x; b.ey=epB.y;
+    renderCanvas();
+
+  } else if (drag.type==='curve-body') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (!elem) return;
+    const origP1=econToSVG(drag.ox1,drag.oy1), origP2=econToSVG(drag.ox2,drag.oy2);
+    const dx=sp.x-drag.startSP.x, dy=sp.y-drag.startSP.y;
+    let ep1=svgToEcon(origP1.x+dx, origP1.y+dy);
+    let ep2=svgToEcon(origP2.x+dx, origP2.y+dy);
+    if (e.shiftKey) { ep1=snapToGrid(ep1.x,ep1.y); ep2=snapToGrid(ep2.x,ep2.y); }
+    ep1=clampEcon(ep1.x,ep1.y); ep2=clampEcon(ep2.x,ep2.y);
+    if (drag.ocpx!==undefined) {
+      const dex=ep1.x-drag.ox1, dey=ep1.y-drag.oy1;
+      elem.cpx=drag.ocpx+dex; elem.cpy=drag.ocpy+dey;
+    }
+    elem.x1=ep1.x; elem.y1=ep1.y; elem.x2=ep2.x; elem.y2=ep2.y;
+    renderCanvas();
+
+  } else if (drag.type==='tangentcurve-slide') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    const line=elem&&state.elements.find(x=>x.id===elem.lineId);
+    const geo=line&&getLineGeometry(line);
+    if (!elem||!geo) return;
+    const {a,b}=geo;
+    const p1=econToSVG(a.x,a.y), p2=econToSVG(b.x,b.y);
+    const segLen2=(p2.x-p1.x)*(p2.x-p1.x)+(p2.y-p1.y)*(p2.y-p1.y);
+    let t = segLen2>0 ? ((sp.x-p1.x)*(p2.x-p1.x)+(sp.y-p1.y)*(p2.y-p1.y))/segLen2 : 0;
+    elem.t=Math.max(0,Math.min(1,t));
+    renderCanvas();
+
+  } else if (drag.type==='tangent-t') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    const curve=elem&&state.elements.find(c=>c.id===elem.curveId);
+    if (!elem||!curve) return;
+    const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2);
+    const cp=curveCP(curve);
+    let bestT=elem.t, bestD=Infinity;
+    for (let t=0;t<=1;t+=0.01) {
+      const pt=qBez(p1s,cp,p2s,t);
+      const d=Math.hypot(pt.x-sp.x,pt.y-sp.y);
+      if (d<bestD){bestD=d;bestT=t;}
+    }
+    elem.t=Math.max(0.02,Math.min(0.98,bestT));
+    renderCanvas();
+
+  } else if (drag.type==='tangent-ext') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    const curve=elem&&state.elements.find(c=>c.id===elem.curveId);
+    if (!elem||!curve) return;
+    const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2);
+    const cp=curveCP(curve);
+    const pos=qBez(p1s,cp,p2s,elem.t);
+    const tanv=qBezTan(p1s,cp,p2s,elem.t);
+    const ln=Math.hypot(tanv.x,tanv.y)||1;
+    const nx=tanv.x/ln, ny=tanv.y/ln;
+    const proj=(sp.x-pos.x)*nx+(sp.y-pos.y)*ny;
+    if (drag.h==='eB') { elem.extPos=Math.max(10,proj); }
+    else { elem.extNeg=Math.max(10,-proj); }
+    renderCanvas();
+
+  } else if (drag.type==='label') {
+    const elem=state.elements.find(x=>x.id===drag.id);
+    if (!elem) return;
+    elem.lox=drag.origLox+(sp.x-drag.startSP.x);
+    elem.loy=drag.origLoy+(sp.y-drag.startSP.y);
+    renderCanvas();
+  }
+});
+
+let justMarqueed = false;
+function finalizeMarquee() {
+  if (!marquee) return;
+  const dx=Math.abs(marquee.curSP.x-marquee.startSP.x);
+  const dy=Math.abs(marquee.curSP.y-marquee.startSP.y);
+  if (dx>4 || dy>4) {
+    const rect={
+      x1:Math.min(marquee.startSP.x,marquee.curSP.x), y1:Math.min(marquee.startSP.y,marquee.curSP.y),
+      x2:Math.max(marquee.startSP.x,marquee.curSP.x), y2:Math.max(marquee.startSP.y,marquee.curSP.y)
+    };
+    selectMultiple(elementsInRect(rect));
+    justMarqueed = true;
+    setTimeout(()=>{ justMarqueed=false; }, 0);
+  }
+  marquee = null;
+  render();
+}
+svg.addEventListener('mouseup',()=>{ drag=null; finalizeMarquee(); });
+document.addEventListener('mouseup',()=>{ drag=null; finalizeMarquee(); });
+
+/* =====================================================================
+   DISTANCE-BASED HIT DETECTION
+   ===================================================================== */
+function ptSegDist(px,py,ax,ay,bx,by) {
+  const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy;
+  if (!l2) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+
+function rectContainsPt(rect, p) {
+  return p.x>=rect.x1 && p.x<=rect.x2 && p.y>=rect.y1 && p.y<=rect.y2;
+}
+function segSegIntersect(p1,p2,p3,p4) {
+  function ccw(a,b,c) { return (c.y-a.y)*(b.x-a.x) > (b.y-a.y)*(c.x-a.x); }
+  return (ccw(p1,p3,p4) !== ccw(p2,p3,p4)) && (ccw(p1,p2,p3) !== ccw(p1,p2,p4));
+}
+function segIntersectsRect(p1, p2, rect) {
+  if (rectContainsPt(rect,p1) || rectContainsPt(rect,p2)) return true;
+  const c=[{x:rect.x1,y:rect.y1},{x:rect.x2,y:rect.y1},{x:rect.x2,y:rect.y2},{x:rect.x1,y:rect.y2}];
+  for (let i=0;i<4;i++) {
+    if (segSegIntersect(p1,p2,c[i],c[(i+1)%4])) return true;
+  }
+  return false;
+}
+function elementsInRect(rect) {
+  const ids=[];
+  const o=econToSVG(0,0), xEnd=econToSVG(state.xScale,0), yEnd=econToSVG(0,state.yScale);
+  if (segIntersectsRect(o,xEnd,rect)) ids.push('xaxis');
+  if (segIntersectsRect(o,yEnd,rect)) ids.push('yaxis');
+  for (const elem of state.elements) {
+    let hit=false;
+    if (elem.type==='point' || elem.type==='text') {
+      hit=rectContainsPt(rect, econToSVG(elem.ex,elem.ey));
+    } else if (elem.type==='line') {
+      const a=state.elements.find(x=>x.id===elem.p1Id);
+      const b=state.elements.find(x=>x.id===elem.p2Id);
+      if (a&&b) {
+        hit=segIntersectsRect(econToSVG(a.ex,a.ey), econToSVG(b.ex,b.ey), rect);
+      }
+    } else if (elem.type==='curve') {
+      const p1=econToSVG(elem.x1,elem.y1), p2=econToSVG(elem.x2,elem.y2), cp=curveCP(elem);
+      let prev=p1;
+      for (let t=0.05;t<=1.0001;t+=0.05) {
+        const cur=qBez(p1,cp,p2,Math.min(t,1));
+        if (segIntersectsRect(prev,cur,rect)) { hit=true; break; }
+        prev=cur;
+      }
+    } else if (elem.type==='tangent') {
+      const curve=state.elements.find(x=>x.id===elem.curveId);
+      if (curve) {
+        const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2), cp=curveCP(curve);
+        const pos=qBez(p1s,cp,p2s,elem.t);
+        const tanv=qBezTan(p1s,cp,p2s,elem.t);
+        const ln=Math.hypot(tanv.x,tanv.y)||1;
+        const nx=tanv.x/ln, ny=tanv.y/ln;
+        const extNeg=elem.extNeg!==undefined?elem.extNeg:150;
+        const extPos=elem.extPos!==undefined?elem.extPos:150;
+        const endA={x:pos.x-nx*extNeg,y:pos.y-ny*extNeg};
+        const endB={x:pos.x+nx*extPos,y:pos.y+ny*extPos};
+        hit=segIntersectsRect(endA,endB,rect);
+      }
+    }
+    if (hit) ids.push(elem.id);
+  }
+  return ids;
+}
+function nearestElement(sx, sy, threshCSS=13) {
+  // Convert CSS-pixel threshold to SVG-pixel threshold based on current display scale
+  const r = svg.getBoundingClientRect();
+  const scale = r.width ? r.width / SVG_W : 1;
+  const thresh = threshCSS / scale;
+  let bestId=null, bestD=thresh;
+  const o=econToSVG(0,0), xEnd=econToSVG(state.xScale,0), yEnd=econToSVG(0,state.yScale);
+  const dX=ptSegDist(sx,sy,o.x,o.y,xEnd.x,xEnd.y);
+  if (dX<bestD) { bestD=dX; bestId='xaxis'; }
+  const dY=ptSegDist(sx,sy,o.x,o.y,yEnd.x,yEnd.y);
+  if (dY<bestD) { bestD=dY; bestId='yaxis'; }
+  for (const elem of state.elements) {
+    let d=Infinity;
+    if (elem.type==='point' || elem.type==='text') {
+      const p=econToSVG(elem.ex,elem.ey);
+      d=Math.hypot(p.x-sx,p.y-sy);
+    } else if (elem.type==='line') {
+      const a=state.elements.find(x=>x.id===elem.p1Id);
+      const b=state.elements.find(x=>x.id===elem.p2Id);
+      if (!a||!b) continue;
+      const p1=econToSVG(a.ex,a.ey), p2=econToSVG(b.ex,b.ey);
+      d=ptSegDist(sx,sy,p1.x,p1.y,p2.x,p2.y);
+    } else if (elem.type==='curve') {
+      const p1=econToSVG(elem.x1,elem.y1), p2=econToSVG(elem.x2,elem.y2);
+      const cp=curveCP(elem);
+      for (let t=0;t<=1;t+=0.02) {
+        const pt=qBez(p1,cp,p2,t);
+        d=Math.min(d,Math.hypot(pt.x-sx,pt.y-sy));
+      }
+    } else if (elem.type==='tangent') {
+      const c=state.elements.find(x=>x.id===elem.curveId);
+      if (!c) continue;
+      const p1=econToSVG(c.x1,c.y1), p2=econToSVG(c.x2,c.y2), cp=curveCP(c);
+      const pos=qBez(p1,cp,p2,elem.t), tan=qBezTan(p1,cp,p2,elem.t);
+      const ln=Math.hypot(tan.x,tan.y)||1;
+      const nx=tan.x/ln, ny=tan.y/ln, ext=160;
+      d=ptSegDist(sx,sy,pos.x-nx*ext,pos.y-ny*ext,pos.x+nx*ext,pos.y+ny*ext);
+    }
+    if (d<bestD){bestD=d;bestId=elem.id;}
+  }
+  return bestId;
+}
+
+/* =====================================================================
+   CANVAS CLICK
+   ===================================================================== */
+svg.addEventListener('click', e=>{
+  if (drag) return;
+  if (justMarqueed) { justMarqueed=false; return; }
+  const sp=getSVGPt(e);
+
+  if (state.mode==='select') {
+    const near=nearestElement(sp.x,sp.y);
+    if (near) { selectEl(near); } else { clearSelection(); render(); }
+    return;
+  }
+
+  if (!isInGrid(sp.x,sp.y)) return;
+  const placeSVG = resolveSnap(sp.x,sp.y,e,null);
+  let ep=svgToEcon(placeSVG.x,placeSVG.y);
+  ep=clampEcon(ep.x,ep.y);
+
+  if (state.mode==='point') {
+    // Don't place point if clicking on an existing element
+    const near=nearestElement(sp.x,sp.y,9);
+    if (!near) addPoint(ep.x,ep.y);
+
+  } else if (state.mode==='text') {
+    addText(ep.x,ep.y);
+    setMode('select');
+
+  } else if (state.mode==='line') {
+    const near=nearestElement(sp.x,sp.y,9);
+    const nearEl=near && state.elements.find(x=>x.id===near);
+    if (nearEl && nearEl.type==='point') {
+      // Click on existing point
+      if (!state.lineFirstId) {
+        state.lineFirstId=nearEl.id; selectEl(nearEl.id);
+      } else if (state.lineFirstId!==nearEl.id) {
+        addLine(state.lineFirstId,nearEl.id);
+        state.lineFirstId=null; setMode('select');
+      }
+    } else {
+      // Place new point on canvas
+      const nid=addPoint(ep.x,ep.y);
+      if (!state.lineFirstId) { state.lineFirstId=nid; }
+      else { addLine(state.lineFirstId,nid); state.lineFirstId=null; setMode('select'); }
+    }
+  }
+});
+
+// Line-mode point selection is now handled in the main SVG click handler above.
+
+// Clicking anywhere on the canvas area (including the padding outside the
+// plotted grid/SVG bounds) deselects, not just clicks that land on the SVG itself.
+// Uses mousedown (like element selection does) rather than click, since click
+// is not always synthesized after a programmatic/automated mousedown+mouseup.
+document.getElementById('canvas-area').addEventListener('mousedown', e=>{
+  if (e.button !== 0) return;
+  if (drag || marquee) return;
+  if (state.mode!=='select') return;
+  if (e.target.closest('#toolbar')) return;
+  if (e.target.closest('svg#main-svg')) return;
+  clearSelection();
+  render();
+});
+
+function getSVGPt(e) {
+  const r=svg.getBoundingClientRect();
+  return {
+    x:(e.clientX-r.left)*(SVG_W/r.width),
+    y:(e.clientY-r.top)*(SVG_H/r.height)
+  };
+}
+
+/* =====================================================================
+   MODE & TOOLBAR
+   ===================================================================== */
+function setMode(m) {
+  state.mode=m;
+  if (m!=='line') state.lineFirstId=null;
+  if (m==='point' || m==='line' || m==='text') clearSelection();
+  svg.className.baseVal=(m==='select')?``:(`mode-${m}`);
+  syncToolbarButtons();
+  render();
+}
+
+function syncToolbarButtons() {
+  ['select','point','line','curve','text'].forEach(m=>{
+    const b=document.getElementById('btn-'+m);
+    if (b) b.classList.toggle('active', state.mode===m);
+  });
+}
+
+/* =====================================================================
+   ADD / DELETE ELEMENTS
+   ===================================================================== */
+function addPoint(ex,ey) {
+  pushUndo();
+  const id=uid();
+  state.elements.push({id,type:'point',ex,ey,color:'#222',size:5,label:''});
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+  return id;
+}
+
+function addText(ex,ey) {
+  pushUndo();
+  const id=uid();
+  state.elements.push({id,type:'text',ex,ey,text:'Text',color:'#222',fontSize:14,labelRotation:0});
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+  return id;
+}
+
+function addLine(p1Id,p2Id) {
+  pushUndo();
+  const id=uid();
+  state.elements.push({id,type:'line',p1Id,p2Id,color:nextColor(),thickness:2,dotted:false,label:''});
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+  return id;
+}
+
+function addCurve(shape, anchor) {
+  pushUndo();
+  const id=uid();
+  const isIncreasing = shape==='increasing-convex' || shape==='increasing-concave';
+  let x1=0,y1=7,x2=7,y2=0;
+  if (isIncreasing) { x1=0.5; y1=0.5; x2=state.xScale*0.85; y2=state.yScale*0.85; }
+  if (anchor && anchor.type==='point') {
+    const ax=anchor.ex, ay=anchor.ey;
+    if (shape==='convex') {
+      x1=0; y1=Math.min(state.yScale*0.9, ay+ax*0.5);
+      x2=Math.min(state.xScale*0.9, ax+ay*0.5); y2=0;
+    } else if (isIncreasing) {
+      x1=Math.max(0.3, ax*0.3); y1=Math.max(0.3, ay*0.3);
+      x2=Math.min(state.xScale*0.95, ax+(state.xScale-ax)*0.5);
+      y2=Math.min(state.yScale*0.95, ay+(state.yScale-ay)*0.5);
+    } else {
+      x1=0; y1=Math.max(state.yScale*0.1, ay-ax*0.2);
+      x2=Math.min(state.xScale*0.9, ax+ay*0.2); y2=state.yScale;
+    }
+  }
+  state.elements.push({id,type:'curve',shape,
+    x1:Math.max(0,x1),y1:Math.max(0,y1),
+    x2:Math.min(state.xScale,x2),y2:Math.min(state.yScale,y2),
+    curvature:0.72,color:nextColor(),thickness:2,dotted:false,label:''
+  });
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+  return id;
+}
+
+function addTangent(curveId, t) {
+  pushUndo();
+  const id=uid();
+  state.elements.push({id,type:'tangent',curveId,t:t!==undefined?t:0.5,
+    color:nextColor(),thickness:2,dotted:false,label:''});
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+}
+
+function findLineThroughPoint(pointId, tolEcon) {
+  const pt=state.elements.find(e=>e.id===pointId);
+  if (!pt) return null;
+  // An exact endpoint reference is unambiguous — prefer it over any distance match.
+  const exact=state.elements.find(elem=>elem.type==='line' && (elem.p1Id===pointId || elem.p2Id===pointId));
+  if (exact) return exact;
+  const tol=tolEcon!==undefined?tolEcon:Math.max(state.xScale,state.yScale)*0.02;
+  let best=null, bestD=tol;
+  for (const elem of state.elements) {
+    if (elem.type!=='line' && elem.type!=='tangent') continue;
+    const geo=getLineGeometry(elem);
+    if (!geo) continue;
+    const d=ptSegDist(pt.ex,pt.ey,geo.a.x,geo.a.y,geo.b.x,geo.b.y);
+    if (d < bestD) { bestD=d; best=elem; }
+  }
+  return best;
+}
+function findCurveThroughPoint(pointId, tolEcon) {
+  const pt=state.elements.find(e=>e.id===pointId);
+  if (!pt) return null;
+  const tol=tolEcon!==undefined?tolEcon:Math.max(state.xScale,state.yScale)*0.02;
+  let best=null, bestOverallD=tol;
+  for (const elem of state.elements) {
+    if (elem.type!=='curve') continue;
+    const P0={x:elem.x1,y:elem.y1}, P2={x:elem.x2,y:elem.y2}, Pc=econCurveCP(elem);
+    let bestD=Infinity, bestT=0.5;
+    const N=60;
+    for (let i=0;i<=N;i++) {
+      const t=i/N, mt=1-t;
+      const x=mt*mt*P0.x+2*mt*t*Pc.x+t*t*P2.x;
+      const y=mt*mt*P0.y+2*mt*t*Pc.y+t*t*P2.y;
+      const d=Math.hypot(x-pt.ex,y-pt.ey);
+      if (d<bestD) { bestD=d; bestT=t; }
+    }
+    if (bestD < bestOverallD) { bestOverallD=bestD; best={curve:elem, t:Math.max(0.02,Math.min(0.98,bestT))}; }
+  }
+  return best;
+}
+function getLineGeometry(hostElem) {
+  if (hostElem.type==='line') {
+    const a=state.elements.find(x=>x.id===hostElem.p1Id);
+    const b=state.elements.find(x=>x.id===hostElem.p2Id);
+    if (!a||!b) return null;
+    return {a:{x:a.ex,y:a.ey}, b:{x:b.ex,y:b.ey}};
+  }
+  if (hostElem.type==='tangent') {
+    const curve=state.elements.find(x=>x.id===hostElem.curveId);
+    if (!curve) return null;
+    const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2), cp=curveCP(curve);
+    const pos=qBez(p1s,cp,p2s,hostElem.t);
+    const tanv=qBezTan(p1s,cp,p2s,hostElem.t);
+    const ln=Math.hypot(tanv.x,tanv.y)||1;
+    const nx=tanv.x/ln, ny=tanv.y/ln;
+    const extNeg=hostElem.extNeg!==undefined?hostElem.extNeg:150;
+    const extPos=hostElem.extPos!==undefined?hostElem.extPos:150;
+    const a=svgToEcon(pos.x-nx*extNeg, pos.y-ny*extNeg);
+    const b=svgToEcon(pos.x+nx*extPos, pos.y+ny*extPos);
+    return {a, b};
+  }
+  return null;
+}
+function tangentContactPoint(tangentElem) {
+  const curve=state.elements.find(x=>x.id===tangentElem.curveId);
+  if (!curve) return null;
+  const p1s=econToSVG(curve.x1,curve.y1), p2s=econToSVG(curve.x2,curve.y2), cp=curveCP(curve);
+  const pos=qBez(p1s,cp,p2s,tangentElem.t);
+  return svgToEcon(pos.x,pos.y);
+}
+function computeTangentCurvePoints(Q, dir, perp, sign, initialL) {
+  function pointsFor(l) {
+    const d=l*0.35;
+    const M={x:Q.x-sign*d*perp.x, y:Q.y-sign*d*perp.y};
+    return {
+      P0:{x:M.x-(l/2)*dir.x, y:M.y-(l/2)*dir.y},
+      P2:{x:M.x+(l/2)*dir.x, y:M.y+(l/2)*dir.y},
+      Pc:{x:Q.x+sign*d*perp.x, y:Q.y+sign*d*perp.y}
+    };
+  }
+  // Shrink the span L (proportionally, around Q) until both endpoints fit in
+  // bounds — clamping x/y independently would shift the tangency point.
+  let L=initialL, pts=pointsFor(L), iter=0;
+  while ((!inBoundsEcon(pts.P0.x,pts.P0.y) || !inBoundsEcon(pts.P2.x,pts.P2.y)) && iter<40) {
+    L*=0.85; pts=pointsFor(L); iter++;
+  }
+  return {P0:pts.P0, P2:pts.P2, Pc:pts.Pc, L};
+}
+function addTangentCurveToLine(lineId, shape, Q, pointId) {
+  const line=state.elements.find(x=>x.id===lineId);
+  if (!line) return;
+  pushUndo();
+  const geo=getLineGeometry(line);
+  if (!geo) return;
+  const {a,b}=geo;
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const lenSq=dx*dx+dy*dy;
+  const len=Math.sqrt(lenSq)||1;
+  const dir={x:dx/len,y:dy/len};
+  const perp={x:-dir.y,y:dir.x};
+  if (!Q) Q={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  const sign=shape==='convex'?1:-1;
+  const initialL=Math.min(len*0.6, Math.max(state.xScale,state.yScale)*0.5) || 1;
+  const {P0,P2,Pc,L}=computeTangentCurvePoints(Q,dir,perp,sign,initialL);
+  const t=lenSq>0 ? ((Q.x-a.x)*dx+(Q.y-a.y)*dy)/lenSq : 0.5;
+  const id=uid();
+  state.elements.push({id,type:'curve',shape,
+    x1:P0.x,y1:P0.y,x2:P2.x,y2:P2.y,
+    cpx:Pc.x,cpy:Pc.y,
+    lineId, t:Math.max(0,Math.min(1,t)), span:L, pointId,
+    color:nextColor(),thickness:2,dotted:false,label:''});
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+}
+function resolveTangentCurveGeometry(elem) {
+  const line=state.elements.find(x=>x.id===elem.lineId);
+  if (!line) return;
+  const geo=getLineGeometry(line);
+  if (!geo) return;
+  const {a,b}=geo;
+  const Q={x:a.x+(b.x-a.x)*elem.t, y:a.y+(b.y-a.y)*elem.t};
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const len=Math.hypot(dx,dy)||1;
+  const dir={x:dx/len,y:dy/len};
+  const perp={x:-dir.y,y:dir.x};
+  const sign=elem.shape==='convex'?1:-1;
+  const initialL=elem.span || Math.min(len*0.6, Math.max(state.xScale,state.yScale)*0.5) || 1;
+  const {P0,P2,Pc}=computeTangentCurvePoints(Q,dir,perp,sign,initialL);
+  elem.x1=P0.x; elem.y1=P0.y; elem.x2=P2.x; elem.y2=P2.y;
+  elem.cpx=Pc.x; elem.cpy=Pc.y;
+  if (elem.pointId!==undefined) {
+    const pt=state.elements.find(x=>x.id===elem.pointId);
+    if (pt) { pt.ex=Q.x; pt.ey=Q.y; }
+  }
+}
+function handleAddTangentCurve(lineId, Q, pointId) {
+  showPopup(
+    'Add Tangent Curve',
+    'Choose the shape for a curve tangent to this line at the selected point:',
+    [
+      {label:'Convex',cls:'primary',fn:()=>{addTangentCurveToLine(lineId,'convex',Q,pointId);closePopup();}},
+      {label:'Concave',cls:'secondary',fn:()=>{addTangentCurveToLine(lineId,'concave',Q,pointId);closePopup();}},
+      {label:'Cancel',cls:'ghost',fn:closePopup},
+    ]
+  );
+}
+
+function duplicateCurveShifted(src) {
+  pushUndo();
+  const off=1.2;
+  const dx=src.shape==='convex'?-off:off;
+  const dy=src.shape==='convex'?off:-off;
+  const id=uid();
+  const dupe={
+    ...src, id,
+    x1: Math.max(0,src.x1+dx),
+    y1: Math.min(state.yScale,src.y1+dy),
+    x2: Math.min(state.xScale,src.x2-dx),
+    y2: Math.max(0,src.y2-dy),
+    label:''
+  };
+  if (src.cpx!==undefined) { dupe.cpx=src.cpx+dx; dupe.cpy=src.cpy+dy; }
+  // A duplicate is a free-standing curve, not linked to the original's tangent line.
+  delete dupe.lineId; delete dupe.t; delete dupe.span; delete dupe.pointId;
+  state.elements.push(dupe);
+  state.selectedId=id;
+  state.selectedIds=new Set([id]);
+  render();
+}
+
+function deleteSelected() {
+  if (!state.selectedIds || state.selectedIds.size===0) return;
+  pushUndo();
+  const gone=state.selectedIds;
+  state.elements=state.elements.filter(e=>!gone.has(e.id));
+  // Remove orphaned dependents — loop until stable, since deleting one thing
+  // (e.g. a line) can orphan another (a tangent-curve on it, then a tangent
+  // line attached to that tangent-curve, and so on).
+  let changed=true;
+  while (changed) {
+    const before=state.elements.length;
+    state.elements=state.elements.filter(e=>{
+      if (e.type==='line') {
+        return state.elements.find(x=>x.id===e.p1Id) && state.elements.find(x=>x.id===e.p2Id);
+      }
+      if (e.type==='tangent') {
+        return state.elements.find(x=>x.id===e.curveId);
+      }
+      if (e.type==='curve' && e.lineId!==undefined) {
+        return state.elements.find(x=>x.id===e.lineId);
+      }
+      if (e.type==='shade') {
+        const okA = e.boundA==='xaxis'||e.boundA==='yaxis' || state.elements.find(x=>x.id===e.boundA);
+        const okB = e.boundB==='xaxis'||e.boundB==='yaxis' || state.elements.find(x=>x.id===e.boundB);
+        return okA && okB;
+      }
+      return true;
+    });
+    changed = state.elements.length!==before;
+  }
+  clearSelection();
+  render();
+}
+
+function copySelected() {
+  const ids=[...state.selectedIds].filter(id=>id!=='xaxis'&&id!=='yaxis');
+  if (ids.length===0) return;
+  const toClone=new Set(ids);
+  ids.forEach(id=>{
+    const e=state.elements.find(x=>x.id===id);
+    if (e && e.type==='line') { toClone.add(e.p1Id); toClone.add(e.p2Id); }
+  });
+  clipboard=[...toClone].map(id=>state.elements.find(x=>x.id===id)).filter(Boolean).map(e=>JSON.parse(JSON.stringify(e)));
+}
+
+function pasteClipboard() {
+  if (!clipboard || clipboard.length===0) return;
+  pushUndo();
+  const off=Math.max(state.xScale,state.yScale)*0.03;
+  const idMap={};
+  clipboard.forEach(src=>{ idMap[src.id]=uid(); });
+  const newIds=[];
+  clipboard.forEach(src=>{
+    const dupe=JSON.parse(JSON.stringify(src));
+    dupe.id=idMap[src.id];
+    if (dupe.type==='point' || dupe.type==='text') {
+      const c=clampEcon(src.ex+off, src.ey+off);
+      dupe.ex=c.x; dupe.ey=c.y;
+    } else if (dupe.type==='curve') {
+      const c1=clampEcon(src.x1+off,src.y1+off), c2=clampEcon(src.x2+off,src.y2+off);
+      dupe.x1=c1.x; dupe.y1=c1.y; dupe.x2=c2.x; dupe.y2=c2.y;
+      if (src.cpx!==undefined) { dupe.cpx=src.cpx+off; dupe.cpy=src.cpy+off; }
+      delete dupe.lineId; delete dupe.t; delete dupe.span; delete dupe.pointId;
+    } else if (dupe.type==='line') {
+      dupe.p1Id = idMap[src.p1Id]!==undefined ? idMap[src.p1Id] : src.p1Id;
+      dupe.p2Id = idMap[src.p2Id]!==undefined ? idMap[src.p2Id] : src.p2Id;
+    } else if (dupe.type==='tangent') {
+      dupe.curveId = idMap[src.curveId]!==undefined ? idMap[src.curveId] : src.curveId;
+    } else if (dupe.type==='shade') {
+      dupe.boundA = idMap[src.boundA]!==undefined ? idMap[src.boundA] : src.boundA;
+      dupe.boundB = idMap[src.boundB]!==undefined ? idMap[src.boundB] : src.boundB;
+    }
+    state.elements.push(dupe);
+    newIds.push(dupe.id);
+  });
+  selectMultiple(newIds);
+  render();
+}
+
+function duplicateSelected() {
+  copySelected();
+  pasteClipboard();
+}
+
+function nudgeSelected(dx, dy, pushHistory) {
+  if (pushHistory) pushUndo();
+  const movedPointIds=new Set();
+  state.selectedIds.forEach(id=>{
+    const e=state.elements.find(x=>x.id===id);
+    if (!e) return;
+    if (e.type==='point' || e.type==='text') movedPointIds.add(e.id);
+    else if (e.type==='line') { movedPointIds.add(e.p1Id); movedPointIds.add(e.p2Id); }
+  });
+  movedPointIds.forEach(id=>{
+    const p=state.elements.find(x=>x.id===id);
+    if (!p) return;
+    const c=clampEcon(p.ex+dx, p.ey+dy);
+    p.ex=c.x; p.ey=c.y;
+  });
+  state.selectedIds.forEach(id=>{
+    const e=state.elements.find(x=>x.id===id);
+    if (e && e.type==='curve') {
+      const c1=clampEcon(e.x1+dx,e.y1+dy), c2=clampEcon(e.x2+dx,e.y2+dy);
+      e.x1=c1.x; e.y1=c1.y; e.x2=c2.x; e.y2=c2.y;
+      if (e.cpx!==undefined) { e.cpx+=dx; e.cpy+=dy; }
+    }
+  });
+  renderCanvas();
+}
+
+function selectEl(id) {
+  state.selectedId=id;
+  state.selectedIds=new Set(id!=null?[id]:[]);
+  render();
+}
+function selectMultiple(ids) {
+  state.selectedIds=new Set(ids);
+  state.selectedId=ids.length===1?ids[0]:null;
+  render();
+}
+function selectAll() {
+  selectMultiple(state.elements.map(e=>e.id));
+}
+function clearSelection() {
+  state.selectedId=null;
+  state.selectedIds=new Set();
+}
+
+/* =====================================================================
+   TOOLBAR BUTTON HANDLERS
+   ===================================================================== */
+function handleLineBtn() {
+  const sel=state.elements.find(e=>e.id===state.selectedId);
+  if (sel&&sel.type==='point') {
+    state.mode='line';
+    state.lineFirstId=sel.id;
+    svg.className.baseVal='mode-line';
+    syncToolbarButtons();
+    render();
+  } else {
+    setMode('line');
+  }
+}
+
+function curveShapeIcon(curveD) {
+  return `<svg viewBox="0 0 100 100" width="40" height="40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 10 L14 90 L92 90"/>
+    <path d="M14 10 L8 20 M14 10 L20 20"/>
+    <path d="M92 90 L82 84 M92 90 L82 96"/>
+    <path d="${curveD}"/>
+  </svg>`;
+}
+function handleCurveBtn() {
+  const sel=state.elements.find(e=>e.id===state.selectedId);
+  showPopup(
+    'Add Curve',
+    'Choose the shape for the new curve:',
+    [
+      {label:'Increasing, convex',cls:'secondary pop-btn-icon',html:curveShapeIcon('M22 84 Q84 84 84 22'),fn:()=>{addCurve('increasing-convex',sel);closePopup();}},
+      {label:'Increasing, concave',cls:'secondary pop-btn-icon',html:curveShapeIcon('M22 84 Q22 22 84 22'),fn:()=>{addCurve('increasing-concave',sel);closePopup();}},
+      {label:'Decreasing, convex (Indifference Curve)',cls:'secondary pop-btn-icon',html:curveShapeIcon('M20 18 Q20 82 84 82'),fn:()=>{addCurve('convex',sel);closePopup();}},
+      {label:'Decreasing, concave (PPF-style)',cls:'secondary pop-btn-icon',html:curveShapeIcon('M20 18 Q84 18 84 82'),fn:()=>{addCurve('concave',sel);closePopup();}},
+      {label:'Cancel',cls:'ghost',fn:closePopup},
+    ]
+  );
+}
+
+/* =====================================================================
+   POPUP
+   ===================================================================== */
+function showPopup(title, msg, buttons) {
+  document.getElementById('pop-title').textContent=title;
+  document.getElementById('pop-msg').textContent=msg;
+  const bc=document.getElementById('pop-btns');
+  bc.innerHTML='';
+  buttons.forEach(b=>{
+    const btn=document.createElement('button');
+    btn.className=`pop-btn ${b.cls||'secondary'}`;
+    if (b.html) { btn.innerHTML=b.html; if (b.label) btn.title=b.label; }
+    else btn.textContent=b.label;
+    btn.onclick=b.fn;
+    bc.appendChild(btn);
+  });
+  document.getElementById('popup-overlay').classList.add('open');
+}
+function closePopup(){document.getElementById('popup-overlay').classList.remove('open');}
+document.getElementById('popup-overlay').addEventListener('click',e=>{
+  if (e.target===document.getElementById('popup-overlay')) closePopup();
+});
+
+/* =====================================================================
+   EXPORT
+   ===================================================================== */
+function showExportMenu() {
+  showPopup(
+    'Export Graph',
+    'Choose export format:',
+    [
+      {label:'PNG with background',cls:'primary',fn:()=>{doExport(false);closePopup();}},
+      {label:'PNG (transparent background)',cls:'secondary',fn:()=>{doExport(true);closePopup();}},
+      {label:'SVG (vector)',cls:'secondary',fn:()=>{doExportSVG();closePopup();}},
+      {label:'Cancel',cls:'ghost',fn:closePopup},
+    ]
+  );
+}
+
+function doExportSVG() {
+  const origSel=state.selectedId, origSelIds=state.selectedIds;
+  clearSelection();
+  render();
+  const serializer=new XMLSerializer();
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const svgStr=`<?xml version="1.0" encoding="UTF-8"?>`+serializer.serializeToString(clone);
+  const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.download='cruxplot-graph.svg';
+  link.href=url;
+  link.click();
+  URL.revokeObjectURL(url);
+  state.selectedId=origSel; state.selectedIds=origSelIds;
+  render();
+}
+
+function exportJSONFile() {
+  const data=snapshotState();
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.download='cruxplot-graph.json';
+  link.href=url;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+function triggerImportJSON() {
+  document.getElementById('import-file-input').click();
+}
+function importJSONFile(file) {
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try {
+      const data=JSON.parse(reader.result);
+      pushUndo();
+      Object.assign(state, data);
+      clearSelection();
+      render();
+    } catch(err) {
+      alert('That file could not be read as a cruxplot graph.');
+    }
+  };
+  reader.readAsText(file);
+}
+document.getElementById('import-file-input').addEventListener('change', e=>{
+  const file=e.target.files[0];
+  if (file) importJSONFile(file);
+  e.target.value='';
+});
+
+function doExport(transparent) {
+  const scale=2;
+  const origBg=state.bgColor;
+  const origGrid=state.showGrid;
+  if (transparent) { state.bgColor='transparent'; }
+
+  // Temporarily deselect for clean export
+  const origSel=state.selectedId;
+  const origSelIds=state.selectedIds;
+  clearSelection();
+  render();
+
+  const serializer=new XMLSerializer();
+  // Add xmlns for fonts
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+
+  const svgStr=`<?xml version="1.0" encoding="UTF-8"?>` + serializer.serializeToString(clone);
+  const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+
+  const img=new Image();
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    canvas.width=SVG_W*scale; canvas.height=SVG_H*scale;
+    const ctx=canvas.getContext('2d');
+    if (!transparent) { ctx.fillStyle=origBg; ctx.fillRect(0,0,canvas.width,canvas.height); }
+    ctx.scale(scale,scale);
+    ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    const link=document.createElement('a');
+    link.download='cruxplot-graph.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+
+    // Restore
+    state.bgColor=origBg;
+    state.selectedId=origSel;
+    state.selectedIds=origSelIds;
+    render();
+  };
+  img.onerror=()=>{
+    URL.revokeObjectURL(url);
+    state.bgColor=origBg;
+    state.selectedId=origSel;
+    state.selectedIds=origSelIds;
+    render();
+    alert('Export failed. Try right-clicking the graph and "Save as image".');
+  };
+  img.src=url;
+}
+
+/* =====================================================================
+   EQUATION EDITOR (per-element, editable, live-synced with geometry)
+   ===================================================================== */
+function numFmt(v) {
+  return (Math.round(v*100)/100).toString();
+}
+function numFmtSig(v, sig=4) {
+  if (Math.abs(v) < 1e-9) return '0';
+  return parseFloat(v.toPrecision(sig)).toString();
+}
+function buildConicString(co) {
+  const terms = [[co.A,'x^2'],[co.B,'xy'],[co.C,'y^2'],[co.D,'x'],[co.E,'y']];
+  let out='';
+  terms.forEach(([coef,label])=>{
+    if (Math.abs(coef) < 1e-9) return;
+    const absC=Math.abs(coef);
+    const coefStr = Math.abs(absC-1)<1e-6 ? '' : numFmtSig(absC);
+    if (out==='') {
+      out = (coef<0?'-':'') + coefStr + label;
+    } else {
+      out += ` ${coef<0?'-':'+'} ${coefStr}${label}`;
+    }
+  });
+  if (Math.abs(co.F) > 1e-9 || out==='') {
+    const val=numFmtSig(Math.abs(co.F));
+    out += out==='' ? ((co.F<0?'-':'')+val) : ` ${co.F<0?'-':'+'} ${val}`;
+  }
+  return out + ' = 0';
+}
+function parseConicSide(s) {
+  s = s.replace(/\s+/g,'');
+  if (s==='') return {A:0,B:0,C:0,D:0,E:0,F:0};
+  if (s[0]!=='+' && s[0]!=='-') s='+'+s;
+  const termRe=/([+-])(\d*\.?\d*)(x\^2|y\^2|xy|yx|x|y)?/g;
+  const co={A:0,B:0,C:0,D:0,E:0,F:0};
+  let m;
+  while ((m=termRe.exec(s))!==null) {
+    if (m[0]==='') { termRe.lastIndex++; continue; }
+    const sign=m[1]==='-'?-1:1;
+    const coef=(m[2]===''?1:parseFloat(m[2]))*sign;
+    const v=m[3];
+    if (!v) co.F+=coef;
+    else if (v==='x^2') co.A+=coef;
+    else if (v==='y^2') co.C+=coef;
+    else if (v==='xy'||v==='yx') co.B+=coef;
+    else if (v==='x') co.D+=coef;
+    else if (v==='y') co.E+=coef;
+  }
+  return co;
+}
+function parseConicString(str) {
+  const s=str.trim();
+  if (!s) return null;
+  let lhsStr=s, rhsStr='0';
+  if (s.includes('=')) {
+    const parts=s.split('=');
+    if (parts.length!==2) return null;
+    lhsStr=parts[0]; rhsStr=parts[1];
+  }
+  const lhs=parseConicSide(lhsStr), rhs=parseConicSide(rhsStr);
+  const co={};
+  ['A','B','C','D','E','F'].forEach(k=>co[k]=lhs[k]-rhs[k]);
+  const anyNonzero=Object.values(co).some(v=>Math.abs(v)>1e-12);
+  return anyNonzero ? co : null;
+}
+function solveConicForY(co, x, preferNearY) {
+  const a=co.C, b=co.B*x+co.E, c=co.A*x*x+co.D*x+co.F;
+  if (Math.abs(a) < 1e-9) {
+    if (Math.abs(b) < 1e-9) return null;
+    return -c/b;
+  }
+  const disc=b*b-4*a*c;
+  if (disc < 0) return null;
+  const sq=Math.sqrt(disc);
+  const y1=(-b+sq)/(2*a), y2=(-b-sq)/(2*a);
+  if (preferNearY===undefined) return y1;
+  return Math.abs(y1-preferNearY) <= Math.abs(y2-preferNearY) ? y1 : y2;
+}
+function equationFor(elem) {
+  if (!elem) return '';
+  if (elem.type==='point') {
+    return `(${numFmt(elem.ex)}, ${numFmt(elem.ey)})`;
+  }
+  if (elem.type==='line') {
+    const a=state.elements.find(x=>x.id===elem.p1Id);
+    const b=state.elements.find(x=>x.id===elem.p2Id);
+    if (!a||!b) return '';
+    if (Math.abs(b.ex-a.ex) < 1e-9) return `x = ${numFmt(a.ex)}`;
+    const m=(b.ey-a.ey)/(b.ex-a.ex);
+    const c=a.ey-m*a.ex;
+    return `y = ${numFmt(m)}x ${c>=0?'+':'-'} ${numFmt(Math.abs(c))}`;
+  }
+  if (elem.type==='curve') {
+    const co=curveConicCoeffs(elem);
+    if (co) return buildConicString(co);
+    // near-degenerate (control point ~collinear with endpoints): straight-line form
+    if (Math.abs(elem.x2-elem.x1) < 1e-9) return `x = ${numFmt(elem.x1)}`;
+    const m=(elem.y2-elem.y1)/(elem.x2-elem.x1);
+    const c=elem.y1-m*elem.x1;
+    return `y = ${numFmt(m)}x ${c>=0?'+':'-'} ${numFmt(Math.abs(c))}`;
+  }
+  if (elem.type==='tangent') {
+    return `t = ${numFmt(elem.t)}`;
+  }
+  return '';
+}
+function parseEquation(elem, str) {
+  str = (str||'').trim();
+  if (!elem || !str) return false;
+  if (elem.type==='point') {
+    const m=str.match(/^\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)$/);
+    if (!m) return false;
+    const ep=clampEcon(parseFloat(m[1]), parseFloat(m[2]));
+    elem.ex=ep.x; elem.ey=ep.y;
+    return true;
+  }
+  if (elem.type==='line') {
+    const a=state.elements.find(x=>x.id===elem.p1Id);
+    const b=state.elements.find(x=>x.id===elem.p2Id);
+    if (!a||!b) return false;
+    let m;
+    if ((m=str.match(/^x\s*=\s*(-?\d*\.?\d+)$/i))) {
+      const c=clampEcon(parseFloat(m[1]), 0).x;
+      a.ex=c; b.ex=c;
+      return true;
+    }
+    if ((m=str.match(/^y\s*=\s*(-?\d*\.?\d+)$/i))) {
+      const c=clampEcon(0, parseFloat(m[1])).y;
+      a.ey=c; b.ey=c;
+      return true;
+    }
+    m=str.match(/^y\s*=\s*(-?\d*\.?\d*)\s*x\s*([+-]\s*\d*\.?\d+)?$/i);
+    if (m) {
+      const s=m[1];
+      let slope;
+      if (s===''||s==='+') slope=1;
+      else if (s==='-') slope=-1;
+      else slope=parseFloat(s);
+      const intercept=m[2]!==undefined ? parseFloat(m[2].replace(/\s+/g,'')) : 0;
+      const p1=clampEcon(a.ex, slope*a.ex+intercept);
+      const p2=clampEcon(b.ex, slope*b.ex+intercept);
+      a.ey=p1.y; b.ey=p2.y;
+      return true;
+    }
+    return false;
+  }
+  if (elem.type==='curve') {
+    const co=parseConicString(str);
+    if (!co) return false;
+    if (Math.abs(co.A)<1e-9 && Math.abs(co.B)<1e-9 && Math.abs(co.C)<1e-9) {
+      // No quadratic terms typed — treat as redefining a (currently straight) curve via a line.
+      if (Math.abs(co.E) < 1e-9) {
+        if (Math.abs(co.D) < 1e-9) return false;
+        const cx=clampEcon(-co.F/co.D, 0).x;
+        elem.x1=cx; elem.x2=cx;
+      } else {
+        const newY1=-(co.D*elem.x1+co.F)/co.E;
+        const newY2=-(co.D*elem.x2+co.F)/co.E;
+        const p1=clampEcon(elem.x1,newY1), p2=clampEcon(elem.x2,newY2);
+        elem.y1=p1.y; elem.y2=p2.y;
+      }
+      delete elem.cpx; delete elem.cpy;
+      delete elem.lineId; delete elem.t; delete elem.span; delete elem.pointId;
+      elem.curvature=0;
+      return true;
+    }
+    const X0=elem.x1, X2=elem.x2, Xmid=(X0+X2)/2;
+    const oldCp=econCurveCP(elem);
+    const oldMidY=0.25*elem.y1+0.5*oldCp.y+0.25*elem.y2;
+    const Y0=solveConicForY(co,X0,elem.y1);
+    const Y2=solveConicForY(co,X2,elem.y2);
+    const Ymid=solveConicForY(co,Xmid,oldMidY);
+    if (Y0===null||Y2===null||Ymid===null) return false;
+    const P0=clampEcon(X0,Y0), P2c=clampEcon(X2,Y2);
+    const Mid={x:Xmid,y:Ymid};
+    const Pc={x:2*Mid.x-0.5*P0.x-0.5*P2c.x, y:2*Mid.y-0.5*P0.y-0.5*P2c.y};
+    elem.x1=P0.x; elem.y1=P0.y; elem.x2=P2c.x; elem.y2=P2c.y;
+    elem.cpx=Pc.x; elem.cpy=Pc.y;
+    delete elem.lineId; delete elem.t; delete elem.span; delete elem.pointId;
+    return true;
+  }
+  if (elem.type==='tangent') {
+    const m=str.match(/t\s*=\s*(-?\d*\.?\d+)/i);
+    if (!m) return false;
+    elem.t=Math.max(0.02, Math.min(0.98, parseFloat(m[1])));
+    return true;
+  }
+  return false;
+}
+function normalizeLatex(str) {
+  return String(str)
+    .replace(/\\left/g, '')
+    .replace(/\\right/g, '')
+    .replace(/\\cdot/g, '*')
+    .replace(/\\times/g, '*')
+    .replace(/\^\{([^{}]*)\}/g, '^$1')
+    .replace(/\\,/g, ' ')
+    .replace(/\\!/g, '')
+    .trim();
+}
+function refreshEquationBox() {
+  const input=document.getElementById('equation-input');
+  if (!input) return;
+  const sel=state.elements.find(e=>e.id===state.selectedId);
+  if (!sel) return;
+  if (document.activeElement!==input) {
+    input.value=equationFor(sel);
+    input.style.borderColor='#ccc';
+  }
+}
+
+/* =====================================================================
+   LEFT SIDEBAR
+   ===================================================================== */
+function renderLeftSidebar() {
+  const sb=document.getElementById('left-sidebar');
+  sb.innerHTML='';
+
+  const sel=state.elements.find(e=>e.id===state.selectedId);
+
+  //  equation editor
+  const secEq=sec('Equation');
+  if (sel && (sel.type==='text' || sel.type==='shade')) {
+    const p=document.createElement('p');
+    p.className='no-sel';
+    p.textContent='No equation for this element.';
+    secEq.appendChild(p);
+  } else if (sel) {
+    const input=document.createElement('math-field');
+    input.id='equation-input'; input.className='eq-input';
+    input.setAttribute('math-virtual-keyboard-policy','manual');
+    input.value=equationFor(sel);
+    let commitTimer=null;
+    input.addEventListener('focus', ()=>pushUndo());
+    function applyEquation(isFinal) {
+      const ok=parseEquation(sel, normalizeLatex(input.value));
+      input.style.borderColor = ok ? '#ccc' : '#c0392b';
+      if (ok) { if (isFinal) render(); else renderCanvas(); }
+    }
+    input.addEventListener('input', ()=>{
+      clearTimeout(commitTimer);
+      commitTimer=setTimeout(()=>applyEquation(false), 300);
+    });
+    input.addEventListener('change', ()=>{
+      clearTimeout(commitTimer);
+      applyEquation(true);
+    });
+    secEq.appendChild(input);
+  } else {
+    const p=document.createElement('p');
+    p.className='no-sel';
+    p.textContent = state.selectedIds.size>1
+      ? `${state.selectedIds.size} elements selected.`
+      : 'Select an element to view or edit its equation.';
+    secEq.appendChild(p);
+  }
+  sb.appendChild(secEq);
+
+  //  element properties
+  const secEl=sec('Element Properties');
+  if (sel) {
+    if (sel.type==='text') {
+      secEl.appendChild(ctrlRow('Text', inputTxt(sel.text||'', v=>{sel.text=v;renderCanvas();})));
+      secEl.appendChild(ctrlRow('Font Size', rangeCtrl(sel.fontSize||14,10,36,1, v=>{sel.fontSize=v;renderCanvas();})));
+    } else {
+      secEl.appendChild(ctrlRow('Label', inputTxt(sel.label, v=>{sel.label=v;renderCanvas();})));
+    }
+    secEl.appendChild(ctrlRow('Label Angle', rangeCtrl(sel.labelRotation||0,-180,180,1, v=>{sel.labelRotation=v;renderCanvas();})));
+    secEl.appendChild(ctrlRow('Color', inputColor(sel.color||'#333', v=>{sel.color=v;renderCanvas();})));
+
+    if (sel.type==='shade') {
+      secEl.appendChild(ctrlRow('Opacity', rangeCtrl(sel.opacity!==undefined?sel.opacity:0.3,0.05,0.8,0.05, v=>{sel.opacity=v;renderCanvas();})));
+    }
+
+    if (sel.type==='point') {
+      secEl.appendChild(ctrlRow('Size', rangeCtrl(sel.size||5,2,14,0.5, v=>{sel.size=v;renderCanvas();})));
+
+      const hostLine=findLineThroughPoint(sel.id);
+      if (hostLine) {
+        const btnTC=document.createElement('button');
+        btnTC.className='side-btn'; btnTC.innerHTML='+ Add Tangent Curve<small>curve tangent to the line at this point</small>';
+        btnTC.onclick=()=>handleAddTangentCurve(hostLine.id, {x:sel.ex,y:sel.ey}, sel.id);
+        secEl.appendChild(btnTC);
+      }
+
+      const hostCurveInfo=findCurveThroughPoint(sel.id);
+      if (hostCurveInfo) {
+        const btnTL=document.createElement('button');
+        btnTL.className='side-btn'; btnTL.innerHTML='+ Add Tangent Line<small>line tangent to the curve at this point</small>';
+        btnTL.onclick=()=>addTangent(hostCurveInfo.curve.id, hostCurveInfo.t);
+        secEl.appendChild(btnTL);
+      }
+
+    } else {
+      secEl.appendChild(ctrlRow('Thickness', rangeCtrl(sel.thickness||2,0.5,8,0.5, v=>{sel.thickness=v;renderCanvas();})));
+      const dottedRow=ctrlRow('Dotted');
+      const cb=document.createElement('input');
+      cb.type='checkbox'; cb.checked=!!sel.dotted; cb.addEventListener('change',()=>{pushUndo();sel.dotted=cb.checked;renderCanvas();});
+      dottedRow.appendChild(cb);
+      secEl.appendChild(dottedRow);
+    }
+
+    if ((sel.type==='line' || sel.type==='curve') && sel.lineId===undefined) {
+      secEl.appendChild(ctrlRow('Rotate', rotateCtrl(sel)));
+    }
+
+    if (sel.type==='curve') {
+      if (sel.lineId!==undefined) {
+        secEl.appendChild(ctrlRow('Position', rangeCtrl(sel.t,0,1,0.01, v=>{sel.t=v;renderCanvas();})));
+      } else if (sel.cpx===undefined) {
+        secEl.appendChild(ctrlRow('Curvature', rangeCtrl(sel.curvature||0.72,0,1,0.02, v=>{sel.curvature=v;renderCanvas();})));
+      }
+
+      const btn1=document.createElement('button');
+      btn1.className='side-btn'; btn1.textContent='+ Add Tangent Line';
+      btn1.onclick=()=>addTangent(sel.id);
+      secEl.appendChild(btn1);
+
+      const btn2=document.createElement('button');
+      btn2.className='side-btn'; btn2.innerHTML='+ Add Parallel Curve<small>for IC sets, PPF shifts…</small>';
+      btn2.onclick=()=>duplicateCurveShifted(sel);
+      secEl.appendChild(btn2);
+    }
+
+    if (sel.type==='tangent') {
+      secEl.appendChild(ctrlRow('Position', rangeCtrl(sel.t,0.02,0.98,0.01, v=>{sel.t=v;renderCanvas();})));
+
+      const btnTC=document.createElement('button');
+      btnTC.className='side-btn'; btnTC.innerHTML='+ Add Tangent Curve<small>curve tangent to this line, at its contact point</small>';
+      btnTC.onclick=()=>handleAddTangentCurve(sel.id, tangentContactPoint(sel));
+      secEl.appendChild(btnTC);
+    }
+
+  } else if (state.selectedIds.size>1) {
+    const p=document.createElement('p');
+    p.className='no-sel';
+    p.textContent=`${state.selectedIds.size} elements selected.`;
+    secEl.appendChild(p);
+    const idsArr=[...state.selectedIds];
+    if (idsArr.length===2 && idsArr.every(isShadeable)) {
+      const btnShade=document.createElement('button');
+      btnShade.className='side-btn'; btnShade.innerHTML='▨ Shade Region<small>fill the area between these two</small>';
+      btnShade.onclick=()=>addShade(idsArr[0], idsArr[1]);
+      secEl.appendChild(btnShade);
+    }
+  } else {
+    const p=document.createElement('p');
+    p.className='no-sel';
+    p.textContent='Click an element to select it and edit its properties.';
+    secEl.appendChild(p);
+  }
+  sb.appendChild(secEl);
+
+  //  canvas settings
+  const secC=sec('Canvas');
+  secC.appendChild(ctrlRow('Background', inputColor(state.bgColor, v=>{state.bgColor=v;renderCanvas();})));
+  secC.appendChild(ctrlRow('Grid Color', inputColor(state.gridColor, v=>{state.gridColor=v;renderCanvas();})));
+  const gridRow=ctrlRow('Show Grid');
+  const gcb=document.createElement('input');
+  gcb.type='checkbox'; gcb.checked=state.showGrid;
+  gcb.addEventListener('change',()=>{pushUndo();state.showGrid=gcb.checked;renderCanvas();});
+  gridRow.appendChild(gcb);
+  secC.appendChild(gridRow);
+  sb.appendChild(secC);
+
+  //  axes
+  const secA=sec('Axes');
+  secA.appendChild(ctrlRow('X Label', inputTxt(state.xLabel, v=>{state.xLabel=v;renderCanvas();})));
+  secA.appendChild(ctrlRow('Y Label', inputTxt(state.yLabel, v=>{state.yLabel=v;renderCanvas();})));
+  secA.appendChild(ctrlRow('X Scale', inputNum(state.xScale,1,50, v=>{state.xScale=v;renderCanvas();})));
+  secA.appendChild(ctrlRow('Y Scale', inputNum(state.yScale,1,50, v=>{state.yScale=v;renderCanvas();})));
+  sb.appendChild(secA);
+
+  //  axis tick labels
+  const secT=sec('Axis Tick Labels');
+  const xtRow=ctrlRow('Label X Units');
+  const xtcb=document.createElement('input');
+  xtcb.type='checkbox'; xtcb.checked=state.xTicks.enabled;
+  xtcb.addEventListener('change',()=>{pushUndo();state.xTicks.enabled=xtcb.checked;render();});
+  xtRow.appendChild(xtcb);
+  secT.appendChild(xtRow);
+  if (state.xTicks.enabled) {
+    secT.appendChild(ctrlRow('X Start', inputNum(state.xTicks.start,-1e6,1e6, v=>{state.xTicks.start=v;renderCanvas();},'any')));
+    secT.appendChild(ctrlRow('X End', inputNum(state.xTicks.end,-1e6,1e6, v=>{state.xTicks.end=v;renderCanvas();},'any')));
+    secT.appendChild(ctrlRow('X Increment', inputNum(state.xTicks.step,0.0001,1e6, v=>{state.xTicks.step=v;renderCanvas();},'any')));
+  }
+  const ytRow=ctrlRow('Label Y Units');
+  const ytcb=document.createElement('input');
+  ytcb.type='checkbox'; ytcb.checked=state.yTicks.enabled;
+  ytcb.addEventListener('change',()=>{pushUndo();state.yTicks.enabled=ytcb.checked;render();});
+  ytRow.appendChild(ytcb);
+  secT.appendChild(ytRow);
+  if (state.yTicks.enabled) {
+    secT.appendChild(ctrlRow('Y Start', inputNum(state.yTicks.start,-1e6,1e6, v=>{state.yTicks.start=v;renderCanvas();},'any')));
+    secT.appendChild(ctrlRow('Y End', inputNum(state.yTicks.end,-1e6,1e6, v=>{state.yTicks.end=v;renderCanvas();},'any')));
+    secT.appendChild(ctrlRow('Y Increment', inputNum(state.yTicks.step,0.0001,1e6, v=>{state.yTicks.step=v;renderCanvas();},'any')));
+  }
+  sb.appendChild(secT);
+}
+
+/* Sidebar helpers */
+function sec(title) {
+  const d=document.createElement('div');
+  d.className='sb-section';
+  const h=document.createElement('h3');
+  h.textContent=title;
+  d.appendChild(h);
+  return d;
+}
+function ctrlRow(label, control) {
+  const d=document.createElement('div');
+  d.className='ctrl-row';
+  const l=document.createElement('label');
+  l.textContent=label;
+  d.appendChild(l);
+  if (control) d.appendChild(control);
+  return d;
+}
+function inputTxt(val,cb) {
+  const i=document.createElement('input');
+  i.type='text'; i.value=val;
+  i.addEventListener('focus',()=>pushUndo());
+  i.addEventListener('input',e=>cb(e.target.value));
+  return i;
+}
+function inputColor(val,cb) {
+  const i=document.createElement('input');
+  i.type='color'; i.value=val;
+  i.addEventListener('focus',()=>pushUndo());
+  i.addEventListener('input',e=>cb(e.target.value));
+  return i;
+}
+function inputNum(val,min,max,cb,step=1) {
+  const i=document.createElement('input');
+  i.type='number'; i.value=val; i.min=min; i.max=max; i.step=step;
+  i.addEventListener('focus',()=>pushUndo());
+  i.addEventListener('change',e=>cb(Math.max(min,Math.min(max,parseFloat(e.target.value)||val))));
+  return i;
+}
+function rangeCtrl(val,min,max,step,cb) {
+  const wrap=document.createElement('div');
+  wrap.className='range-wrap';
+  const r=document.createElement('input');
+  r.type='range'; r.min=min; r.max=max; r.step=step; r.value=val;
+  const lbl=document.createElement('span');
+  lbl.className='range-val';
+  lbl.textContent=formatVal(val,step);
+  r.addEventListener('pointerdown',()=>pushUndo());
+  r.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    lbl.textContent=formatVal(v,step);
+    cb(v);
+  });
+  wrap.appendChild(r); wrap.appendChild(lbl);
+  return wrap;
+}
+function rotateCtrl(elem) {
+  const wrap=document.createElement('div');
+  wrap.className='range-wrap';
+  const r=document.createElement('input');
+  r.type='range'; r.min=-45; r.max=45; r.step=1; r.value=0;
+  const lbl=document.createElement('span');
+  lbl.className='range-val'; lbl.textContent='0°';
+  let lastVal=0;
+  r.addEventListener('pointerdown',()=>pushUndo());
+  r.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    rotateElementBy(elem, v-lastVal);
+    lastVal=v;
+    lbl.textContent=Math.round(v)+'°';
+    renderCanvas();
+  });
+  r.addEventListener('change',()=>{
+    r.value=0; lbl.textContent='0°'; lastVal=0;
+  });
+  wrap.appendChild(r); wrap.appendChild(lbl);
+  return wrap;
+}
+function formatVal(v,step) {
+  return step<1 ? v.toFixed(2) : Math.round(v).toString();
+}
+
+/* =====================================================================
+   RIGHT SIDEBAR — TEMPLATES & HELP
+   ===================================================================== */
+function buildRightSidebar() {
+  const sb=document.getElementById('right-sidebar');
+
+  const tplSec=sec('Templates');
+  const templates=[
+    {name:'Supply & Demand', desc:'Market equilibrium', fn:tplSupplyDemand},
+    {name:'PPF', desc:'Production Possibility Frontier', fn:tplPPF},
+    {name:'Indifference Map', desc:'Set of utility curves', fn:tplICMap},
+    {name:'Budget Line', desc:'Budget constraint + IC tangency', fn:tplBudget},
+    {name:'Perfect Competition', desc:'Demand, supply & equilibrium', fn:tplPerfectComp},
+    {name:'Monopoly', desc:'MR = MC profit maximisation', fn:tplMonopoly},
+  ];
+  const tplGrid=document.createElement('div');
+  tplGrid.className='tpl-grid';
+  templates.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='side-btn tpl-btn';
+    btn.textContent=t.name;
+    btn.onclick=()=>{t.fn();render();};
+    tplGrid.appendChild(btn);
+  });
+  tplSec.appendChild(tplGrid);
+  sb.appendChild(tplSec);
+
+  const helpSec=sec('Keyboard Shortcuts');
+  const kIcon=(src,alt,cls)=>`<img class="key-icon${cls?' '+cls:''}" src="${src}" alt="${alt}">`;
+  const shortcutRow=(imgs,text)=>`<p class="shortcut-row"><span class="key-icon-group">${imgs.join('')}</span><span>${text}</span></p>`;
+  const SHIFT_ICON='data:image/png;base64,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';
+  const CTRL_ICON='data:image/png;base64,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';
+  const DEL_ICON='data:image/png;base64,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';
+  const A_ICON='data:image/png;base64,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';
+  const shortcutsHtml=
+    shortcutRow([kIcon(SHIFT_ICON,'Shift')], 'Snap to grid') +
+    shortcutRow([kIcon(CTRL_ICON,'Ctrl'),kIcon(SHIFT_ICON,'Shift')], 'Object snap') +
+    shortcutRow([kIcon(CTRL_ICON,'Ctrl'),kIcon(A_ICON,'A')], 'Select all') +
+    shortcutRow([kIcon(DEL_ICON,'Delete','key-icon-del')], 'Delete selection');
+  const d=document.createElement('div');
+  d.className='hint-text';
+  d.innerHTML=shortcutsHtml;
+  helpSec.appendChild(d);
+  sb.appendChild(helpSec);
+}
+
+/* =====================================================================
+   TEMPLATES
+   ===================================================================== */
+function clearCanvas() {
+  pushUndo();
+  state.elements=[]; state.selectedId=null; state.selectedIds=new Set(); state.nextId=1;
+}
+
+
+function tplSupplyDemand() {
+  clearCanvas();
+  state.xLabel='Quantity'; state.yLabel='Price';
+
+  // Demand: (0,9) → (9,1)
+  const d1=uid(),d2=uid();
+  push({id:d1,type:'point',ex:0.5,ey:8.5,color:'transparent',size:0,label:''});
+  push({id:d2,type:'point',ex:9,ey:1.5,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2.5,dotted:false,label:'D'});
+
+  // Supply: (0.5,1.5) → (9,8.5)
+  const s1=uid(),s2=uid();
+  push({id:s1,type:'point',ex:0.5,ey:1.5,color:'transparent',size:0,label:''});
+  push({id:s2,type:'point',ex:9,ey:8.5,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:s1,p2Id:s2,color:'#f47835',thickness:2.5,dotted:false,label:'S'});
+
+  // Equilibrium ≈ (5, 5)
+  const eq=uid();
+  push({id:eq,type:'point',ex:5,ey:5,color:'#d41243',size:6,label:'E'});
+  const eh=uid(), ev=uid();
+  push({id:eh,type:'point',ex:0,ey:5,color:'transparent',size:0,label:'P*'});
+  push({id:ev,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q*'});
+  push({id:uid(),type:'line',p1Id:eh,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:ev,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
+}
+
+function tplPPF() {
+  clearCanvas();
+  state.xLabel='Good X'; state.yLabel='Good Y';
+  push({id:uid(),type:'curve',shape:'concave',x1:0,y1:8.5,x2:8.5,y2:0,
+    curvature:0.75,color:'#00aedb',thickness:2.5,dotted:false,label:'PPF'});
+  const pA=uid(), pB=uid(), pC=uid(), pD=uid();
+  push({id:pA,type:'point',ex:3,ey:6.5,color:'#d41243',size:5,label:'A'});
+  push({id:pB,type:'point',ex:6.2,ey:3.8,color:'#d41243',size:5,label:'B'});
+  push({id:pC,type:'point',ex:3.5,ey:3,color:'#8ec127',size:5,label:'C (inefficient)'});
+  push({id:pD,type:'point',ex:7,ey:7,color:'#f47835',size:5,label:'D (unattainable)'});
+}
+
+function tplICMap() {
+  clearCanvas();
+  state.xLabel='Good X'; state.yLabel='Good Y';
+  const cols=['#00aedb','#a200ff','#8ec127'];
+  [[1.5,8.5,8.5,1.5],[3,8.5,8.5,3],[5,8.5,8.5,5]].forEach(([x1,y1,x2,y2],i)=>{
+    push({id:uid(),type:'curve',shape:'convex',x1,y1,x2,y2,
+      curvature:0.7,color:cols[i],thickness:2,dotted:false,label:`U${i+1}`});
+  });
+}
+
+function tplBudget() {
+  clearCanvas();
+  state.xLabel='Good X'; state.yLabel='Good Y';
+  // Budget line
+  const b1=uid(),b2=uid();
+  push({id:b1,type:'point',ex:0,ey:9,color:'transparent',size:0,label:'I/Py'});
+  push({id:b2,type:'point',ex:9,ey:0,color:'transparent',size:0,label:'I/Px'});
+  push({id:uid(),type:'line',p1Id:b1,p2Id:b2,color:'#d41243',thickness:2.5,dotted:false,label:'Budget Line'});
+  // ICs
+  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:5,x2:5,y2:0,curvature:0.7,color:'#a200ff',thickness:1.5,dotted:false,label:'U₁'});
+  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:7.5,x2:7.5,y2:0,curvature:0.7,color:'#00aedb',thickness:2,dotted:false,label:'U₂'});
+  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:9.5,x2:9.5,y2:0,curvature:0.7,color:'#8ec127',thickness:1.5,dotted:false,label:'U₃'});
+  // Tangency point
+  push({id:uid(),type:'point',ex:4.5,ey:4.5,color:'#d41243',size:6,label:'Optimal'});
+}
+
+function tplPerfectComp() {
+  clearCanvas();
+  state.xLabel='Quantity'; state.yLabel='Price / Cost';
+  // Demand = AR (downward)
+  const d1=uid(),d2=uid();
+  push({id:d1,type:'point',ex:0.5,ey:9,color:'transparent',size:0,label:''});
+  push({id:d2,type:'point',ex:9,ey:1,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2,dotted:false,label:'D = AR = MR'});
+  // MC (upward)
+  const mc1=uid(),mc2=uid();
+  push({id:mc1,type:'point',ex:1,ey:2,color:'transparent',size:0,label:''});
+  push({id:mc2,type:'point',ex:9,ey:8,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:mc1,p2Id:mc2,color:'#8ec127',thickness:2,dotted:false,label:'MC = S'});
+  // ATC (U-shaped → approximated as curve)
+  push({id:uid(),type:'curve',shape:'convex',x1:1.5,y1:6,x2:8.5,y2:4.5,curvature:0.5,color:'#f47835',thickness:2,dotted:false,label:'ATC'});
+  // Equilibrium
+  const eq=uid();
+  push({id:eq,type:'point',ex:5,ey:5,color:'#d41243',size:6,label:'E'});
+  // Reference lines
+  const peq=uid(),qeq=uid();
+  push({id:peq,type:'point',ex:0,ey:5,color:'transparent',size:0,label:'P*'});
+  push({id:qeq,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q*'});
+  push({id:uid(),type:'line',p1Id:peq,p2Id:eq,color:'#aaa',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:qeq,p2Id:eq,color:'#aaa',thickness:1.2,dotted:true,label:''});
+}
+
+function tplMonopoly() {
+  clearCanvas();
+  state.xLabel='Quantity'; state.yLabel='Price / Cost';
+  // AR = Demand
+  const d1=uid(),d2=uid();
+  push({id:d1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
+  push({id:d2,type:'point',ex:10,ey:0,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2,dotted:false,label:'AR = D'});
+  // MR (double slope)
+  const mr1=uid(),mr2=uid();
+  push({id:mr1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
+  push({id:mr2,type:'point',ex:5,ey:0,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:mr1,p2Id:mr2,color:'#a200ff',thickness:2,dotted:false,label:'MR'});
+  // MC (upward sloping)
+  const mc1=uid(),mc2=uid();
+  push({id:mc1,type:'point',ex:0,ey:1.5,color:'transparent',size:0,label:''});
+  push({id:mc2,type:'point',ex:9,ey:7,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:mc1,p2Id:mc2,color:'#8ec127',thickness:2,dotted:false,label:'MC'});
+  // Qm ≈ 3 (MR=MC)
+  const qmpt=uid();
+  push({id:qmpt,type:'point',ex:3,ey:3.5,color:'transparent',size:0,label:''});
+  // Pm (price on AR at Qm) ≈ 7
+  const pmpt=uid(), pvpt=uid();
+  push({id:pmpt,type:'point',ex:0,ey:7,color:'transparent',size:0,label:'Pm'});
+  push({id:pvpt,type:'point',ex:3,ey:0,color:'transparent',size:0,label:'Qm'});
+  const top=uid();
+  push({id:top,type:'point',ex:3,ey:7,color:'#d41243',size:6,label:''});
+  push({id:uid(),type:'line',p1Id:pmpt,p2Id:top,color:'#aaa',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:pvpt,p2Id:top,color:'#aaa',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:top,p2Id:qmpt,color:'#aaa',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'point',ex:3,ey:3.5,color:'#d41243',size:5,label:'MR=MC'});
+}
+
+function push(o){state.elements.push(o);}
+
+/* =====================================================================
+   KEYBOARD SHORTCUTS
+   ===================================================================== */
+document.addEventListener('keydown', e=>{
+  if (e.target.tagName==='INPUT' || e.target.tagName==='MATH-FIELD') return;
+  const ctrl = e.ctrlKey||e.metaKey;
+  if (ctrl && e.key.toLowerCase()==='a') {
+    e.preventDefault(); setMode('select'); selectAll();
+    return;
+  }
+  if (ctrl && e.key.toLowerCase()==='z') {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if (ctrl && e.key.toLowerCase()==='y') {
+    e.preventDefault(); redo();
+    return;
+  }
+  if (ctrl && e.key.toLowerCase()==='c') {
+    e.preventDefault(); copySelected();
+    return;
+  }
+  if (ctrl && e.key.toLowerCase()==='v') {
+    e.preventDefault(); pasteClipboard();
+    return;
+  }
+  if (ctrl && e.key.toLowerCase()==='d') {
+    e.preventDefault(); duplicateSelected();
+    return;
+  }
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && state.selectedIds.size>0) {
+    e.preventDefault();
+    const step = (Math.max(state.xScale,state.yScale)*0.01) * (e.shiftKey?5:1);
+    const dx = e.key==='ArrowLeft'?-step : e.key==='ArrowRight'?step : 0;
+    const dy = e.key==='ArrowUp'?step : e.key==='ArrowDown'?-step : 0;
+    nudgeSelected(dx, dy, !e.repeat);
+    return;
+  }
+  if (e.key==='Escape') { setMode('select'); closePopup(); }
+  if ((e.key==='Delete'||e.key==='Backspace') && state.selectedIds.size>0) {
+    e.preventDefault(); deleteSelected();
+  }
+  if (e.key==='p') setMode('point');
+  if (e.key==='l') handleLineBtn();
+  if (e.key==='c') handleCurveBtn();
+  if (e.key==='s') setMode('select');
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+buildRightSidebar();
+if (!tryAutoRestore()) {
+  // No saved work found — load a default template to show off the app
+  tplSupplyDemand();
+}
+render();
+</script>
+</body>
+</html>
