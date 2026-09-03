@@ -1870,7 +1870,7 @@ function handleLineBtn() {
 }
 
 function curveShapeIcon(curveD) {
-  return `<svg viewBox="0 0 100 100" width="40" height="40" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+  return `<svg viewBox="0 0 100 100" width="40" height="40" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M14 10 L14 90 L92 90"/>
     <path d="M14 10 L8 20 M14 10 L20 20"/>
     <path d="M92 90 L82 84 M92 90 L82 96"/>
@@ -2575,44 +2575,85 @@ function clearCanvas() {
 
 function tplSupplyDemand() {
   clearCanvas();
-  state.xLabel='Quantity'; state.yLabel='Price';
+  state.xScale=10; state.yScale=10;
+  state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
+  state.xLabel='Quantity'; state.yLabel='Price ($)';
+  // Market-shortage diagram: a below-equilibrium price P1 creates excess demand (Qd > Qs).
+  // Both lines are centred on (5,5) so their natural crossing is exact, but the
+  // marked points sit at P1 = 3 (below that crossing), not at equilibrium itself.
 
-  // Demand: (0,9) → (9,1)
+  // Demand D0: (0.5,9) -> (9.5,1)
   const d1=uid(),d2=uid();
-  push({id:d1,type:'point',ex:0.5,ey:8.5,color:'transparent',size:0,label:''});
-  push({id:d2,type:'point',ex:9,ey:1.5,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2.5,dotted:false,label:'D'});
+  push({id:d1,type:'point',ex:0.5,ey:9,color:'transparent',size:0,label:''});
+  push({id:d2,type:'point',ex:9.5,ey:1,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#222',thickness:2.5,dotted:false,label:'D₀',lox:-90,loy:-32});
 
-  // Supply: (0.5,1.5) → (9,8.5)
+  // Supply S0: (0.5,1) -> (9.5,9)
   const s1=uid(),s2=uid();
-  push({id:s1,type:'point',ex:0.5,ey:1.5,color:'transparent',size:0,label:''});
-  push({id:s2,type:'point',ex:9,ey:8.5,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:s1,p2Id:s2,color:'#f47835',thickness:2.5,dotted:false,label:'S'});
+  push({id:s1,type:'point',ex:0.5,ey:1,color:'transparent',size:0,label:''});
+  push({id:s2,type:'point',ex:9.5,ey:9,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:s1,p2Id:s2,color:'#222',thickness:2.5,dotted:false,label:'S₀',lox:97,loy:-57});
 
-  // Equilibrium ≈ (5, 5)
-  const eq=uid();
-  push({id:eq,type:'point',ex:5,ey:5,color:'#d41243',size:6,label:'E'});
-  const eh=uid(), ev=uid();
-  push({id:eh,type:'point',ex:0,ey:5,color:'transparent',size:0,label:'P*'});
-  push({id:ev,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q*'});
-  push({id:uid(),type:'line',p1Id:eh,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:ev,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
+  // P1 = 3 (below the D0/S0 crossing at price 5): A on S0 at Q1=2.75, B on D0 at Q2=7.25
+  const zero=uid();
+  push({id:zero,type:'point',ex:0,ey:3,color:'transparent',size:0,label:'P₁'});
+  const ptA=uid(), ptB=uid();
+  push({id:ptA,type:'point',ex:2.75,ey:3,color:'#d41243',size:6,label:'A',lox:-4,loy:-14});
+  push({id:ptB,type:'point',ex:7.25,ey:3,color:'#d41243',size:6,label:'B',lox:6,loy:-14});
+  push({id:uid(),type:'line',p1Id:zero,p2Id:ptB,color:'#d41243',thickness:1.5,dotted:true,label:''});
+
+  // Vertical drop-lines to Q1 and Q2 on the x-axis
+  const q1x=uid(), q2x=uid();
+  push({id:q1x,type:'point',ex:2.75,ey:0,color:'transparent',size:0,label:'Q₁'});
+  push({id:q2x,type:'point',ex:7.25,ey:0,color:'transparent',size:0,label:'Q₂'});
+  push({id:uid(),type:'line',p1Id:q1x,p2Id:ptA,color:'#1f6fd6',thickness:1.5,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:q2x,p2Id:ptB,color:'#1f6fd6',thickness:1.5,dotted:true,label:''});
+
+  push({id:uid(),type:'text',ex:3.4,ey:2.15,text:'Market Shortage',color:'#d41243',fontSize:14,label:''});
+  push({id:uid(),type:'text',ex:4.05,ey:1.55,text:'Qd > Qs',color:'#d41243',fontSize:14,label:''});
 }
 
 function tplPPF() {
   clearCanvas();
-  state.xLabel='Good X'; state.yLabel='Good Y';
-  push({id:uid(),type:'curve',shape:'concave',x1:0,y1:8.5,x2:8.5,y2:0,
-    curvature:0.75,color:'#00aedb',thickness:2.5,dotted:false,label:'PPF'});
-  const pA=uid(), pB=uid(), pC=uid(), pD=uid();
-  push({id:pA,type:'point',ex:3,ey:6.5,color:'#d41243',size:5,label:'A'});
-  push({id:pB,type:'point',ex:6.2,ey:3.8,color:'#d41243',size:5,label:'B'});
-  push({id:pC,type:'point',ex:3.5,ey:3,color:'#8ec127',size:5,label:'C (inefficient)'});
-  push({id:pD,type:'point',ex:7,ey:7,color:'#f47835',size:5,label:'D (unattainable)'});
+  state.xScale=10; state.yScale=10;
+  state.xTicks={enabled:true,start:0,end:10,step:2.25}; state.yTicks={enabled:true,start:0,end:10,step:2.5};
+  state.xLabel='Consumer goods'; state.yLabel='Capital goods';
+  // Same curve as before, scaled down 20x (grid is 0-10 instead of 0-200) so
+  // the shape and every tangency/passage relationship are identical.
+  // Curve endpoints (0,10)-(10,0) with an explicit control point chosen so
+  // the curve passes exactly through the Pareto-efficient point (6.75, 8).
+  push({id:uid(),type:'curve',shape:'concave',x1:0,y1:10,x2:10,y2:0,cpx:8.5,cpy:11,
+    curvature:0.75,color:'#000',thickness:2.5,dotted:false,label:'PPF',lox:-40,loy:-15});
+
+  // Pareto-efficient point, on the frontier, with dotted reference lines to both axes
+  const eff=uid(), effX=uid(), effY=uid();
+  push({id:effX,type:'point',ex:6.75,ey:0,color:'transparent',size:0,label:''});
+  push({id:effY,type:'point',ex:0,ey:8,color:'transparent',size:0,label:''});
+  push({id:eff,type:'point',ex:6.75,ey:8,color:'#d41243',size:6,label:'Pareto Efficiency',lox:10,loy:-8});
+  push({id:uid(),type:'line',p1Id:effX,p2Id:eff,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:effY,p2Id:eff,color:'#d41243',thickness:1.2,dotted:true,label:''});
+
+  // Attainable (inefficient) point inside the frontier, at the same capital-goods
+  // level (5) as the frontier point further out (~8.7,5) - the horizontal
+  // dotted line spans the full gap to show the "wasted" consumer goods.
+  const att=uid(), attX=uid(), attY=uid(), frontierAtY=uid(), frontierAtX=uid();
+  push({id:attX,type:'point',ex:4.5,ey:0,color:'transparent',size:0,label:''});
+  push({id:attY,type:'point',ex:0,ey:5,color:'transparent',size:0,label:''});
+  push({id:att,type:'point',ex:4.5,ey:5,color:'#d41243',size:6,label:'Attainable',lox:10,loy:-8});
+  push({id:frontierAtY,type:'point',ex:8.7,ey:5,color:'transparent',size:0,label:''});
+  push({id:frontierAtX,type:'point',ex:8.7,ey:0,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:attX,p2Id:att,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:attY,p2Id:frontierAtY,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:frontierAtX,p2Id:frontierAtY,color:'#d41243',thickness:1.2,dotted:true,label:''});
+
+  // Unattainable point, outside the frontier
+  push({id:uid(),type:'point',ex:7.5,ey:9.5,color:'#d41243',size:6,label:'Unattainable',lox:10,loy:-8});
 }
 
 function tplICMap() {
   clearCanvas();
+  state.xScale=10; state.yScale=10;
+  state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
   state.xLabel='Good X'; state.yLabel='Good Y';
   const cols=['#00aedb','#a200ff','#8ec127'];
   [[1.5,8.5,8.5,1.5],[3,8.5,8.5,3],[5,8.5,8.5,5]].forEach(([x1,y1,x2,y2],i)=>{
@@ -2623,77 +2664,140 @@ function tplICMap() {
 
 function tplBudget() {
   clearCanvas();
-  state.xLabel='Good X'; state.yLabel='Good Y';
-  // Budget line
-  const b1=uid(),b2=uid();
-  push({id:b1,type:'point',ex:0,ey:9,color:'transparent',size:0,label:'I/Py'});
-  push({id:b2,type:'point',ex:9,ey:0,color:'transparent',size:0,label:'I/Px'});
-  push({id:uid(),type:'line',p1Id:b1,p2Id:b2,color:'#d41243',thickness:2.5,dotted:false,label:'Budget Line'});
-  // ICs
-  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:5,x2:5,y2:0,curvature:0.7,color:'#a200ff',thickness:1.5,dotted:false,label:'U₁'});
-  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:7.5,x2:7.5,y2:0,curvature:0.7,color:'#00aedb',thickness:2,dotted:false,label:'U₂'});
-  push({id:uid(),type:'curve',shape:'convex',x1:0,y1:9.5,x2:9.5,y2:0,curvature:0.7,color:'#8ec127',thickness:1.5,dotted:false,label:'U₃'});
-  // Tangency point
-  push({id:uid(),type:'point',ex:4.5,ey:4.5,color:'#d41243',size:6,label:'Optimal'});
+  state.xScale=16; state.yScale=16;
+  state.xTicks={enabled:true,start:0,end:16,step:1}; state.yTicks={enabled:true,start:0,end:16,step:1};
+  state.xLabel='Oranges (x)'; state.yLabel='Apples (y)';
+  // Income & substitution effects: a fall in the price of oranges rotates the
+  // budget line outward around the same y-intercept (income and the price of
+  // apples are unchanged). Steep line is tangent at (3,6), shallow line at
+  // (7,8) - matching quantity demanded of 3 at the higher price and 7 at the
+  // lower price.
+  //
+  // Each indifference curve is built as a hyperbola-shaped quadratic Bezier:
+  // start (a,h) at the top, control point at the corner (a,k), end (b,k) on
+  // the right. That gives a near-vertical top and near-horizontal tail - the
+  // classic IC shape. Given the left/bottom extents (a,k) and the required
+  // tangency (Mx,My) with slope -mag, the remaining unknowns b, h and the
+  // parameter t are fully determined, so the tangency is exact:
+  //   x(t) = a + (b-a)t^2 , y(t) = k + (h-k)(1-t)^2
+  const icCurve = (a,k,Mx,My,mag) => {
+    const t = mag*(Mx-a) / ((My-k) + mag*(Mx-a));
+    return {x1:a, y1:k + (My-k)/((1-t)*(1-t)), x2:a + (Mx-a)/(t*t), y2:k, cpx:a, cpy:k};
+  };
+
+  // Original (steeper) budget line: (0,15) -> (5,0)
+  const b1=uid(), b2=uid();
+  push({id:b1,type:'point',ex:0,ey:15,color:'transparent',size:0,label:''});
+  push({id:b2,type:'point',ex:5,ey:0,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:b1,p2Id:b2,color:'#e8541e',thickness:2.5,dotted:false,label:''});
+
+  // New (shallower) budget line after the price fall: (0,15) -> (15,0)
+  const b3=uid(), b4=uid();
+  push({id:b3,type:'point',ex:0,ey:15,color:'transparent',size:0,label:''});
+  push({id:b4,type:'point',ex:15,ey:0,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:b3,p2Id:b4,color:'#e8541e',thickness:2.5,dotted:false,label:''});
+
+  // Smaller indifference curve, tangent to the steep line (slope -3) at (3,6)
+  push({id:uid(),type:'curve',...icCurve(2.2,1.5,3,6,3),curvature:0.5,
+    color:'#000',thickness:2,dotted:false,label:''});
+  const t1x=uid(), t1y=uid();
+  push({id:t1x,type:'point',ex:3,ey:0,color:'transparent',size:0,label:''});
+  push({id:t1y,type:'point',ex:0,ey:6,color:'transparent',size:0,label:''});
+  const t1=uid();
+  push({id:t1,type:'point',ex:3,ey:6,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:t1x,p2Id:t1,color:'#555',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t1y,p2Id:t1,color:'#555',thickness:1,dotted:true,label:''});
+
+  // Larger indifference curve, tangent to the shallow line (slope -1) at (7,8)
+  push({id:uid(),type:'curve',...icCurve(4.5,5.2,7,8,1),curvature:0.5,
+    color:'#000',thickness:2,dotted:false,label:''});
+  const t2x=uid(), t2y=uid();
+  push({id:t2x,type:'point',ex:7,ey:0,color:'transparent',size:0,label:''});
+  push({id:t2y,type:'point',ex:0,ey:8,color:'transparent',size:0,label:''});
+  const t2=uid();
+  push({id:t2,type:'point',ex:7,ey:8,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:t2x,p2Id:t2,color:'#555',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t2y,p2Id:t2,color:'#555',thickness:1,dotted:true,label:''});
 }
 
 function tplPerfectComp() {
   clearCanvas();
-  state.xLabel='Quantity'; state.yLabel='Price / Cost';
-  // Demand = AR (downward)
-  const d1=uid(),d2=uid();
-  push({id:d1,type:'point',ex:0.5,ey:9,color:'transparent',size:0,label:''});
-  push({id:d2,type:'point',ex:9,ey:1,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2,dotted:false,label:'D = AR = MR'});
-  // MC (upward)
-  const mc1=uid(),mc2=uid();
-  push({id:mc1,type:'point',ex:1,ey:2,color:'transparent',size:0,label:''});
-  push({id:mc2,type:'point',ex:9,ey:8,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:mc1,p2Id:mc2,color:'#8ec127',thickness:2,dotted:false,label:'MC = S'});
-  // ATC (U-shaped → approximated as curve)
-  push({id:uid(),type:'curve',shape:'convex',x1:1.5,y1:6,x2:8.5,y2:4.5,curvature:0.5,color:'#f47835',thickness:2,dotted:false,label:'ATC'});
-  // Equilibrium
-  const eq=uid();
-  push({id:eq,type:'point',ex:5,ey:5,color:'#d41243',size:6,label:'E'});
-  // Reference lines
-  const peq=uid(),qeq=uid();
-  push({id:peq,type:'point',ex:0,ey:5,color:'transparent',size:0,label:'P*'});
-  push({id:qeq,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q*'});
-  push({id:uid(),type:'line',p1Id:peq,p2Id:eq,color:'#aaa',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:qeq,p2Id:eq,color:'#aaa',thickness:1.2,dotted:true,label:''});
+  state.xScale=10; state.yScale=10;
+  state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
+  state.xLabel='Output/Sales'; state.yLabel='Cost/Revenue';
+  // Long-run zero-economic-profit equilibrium: MC crosses AC exactly at AC's
+  // minimum, and P = MR = AR passes through that same point (5,3).
+
+  // AC (U-shaped, symmetric endpoints give a horizontal tangent at its t=0.5
+  // minimum by construction) - minimum sits exactly at (5,3).
+  push({id:uid(),type:'curve',x1:1.5,y1:6,x2:8.5,y2:6,cpx:5,cpy:0,curvature:0.5,
+    color:'#f47835',thickness:2,dotted:false,label:'AC',lox:15,loy:26});
+
+  // MC (rising), explicit control point so it crosses AC exactly at its minimum (5,3)
+  push({id:uid(),type:'curve',x1:2,y1:0.5,x2:8.5,y2:9.5,cpx:4.75,cpy:1,curvature:0.5,
+    color:'#7fd0e8',thickness:2,dotted:false,label:'MC',lox:-23,loy:-39});
+
+  // P = MR = AR: horizontal line at the zero-profit price level
+  const p1=uid(), p2=uid();
+  push({id:p1,type:'point',ex:0,ey:3,color:'transparent',size:0,label:''});
+  push({id:p2,type:'point',ex:9.5,ey:3,color:'transparent',size:0,label:''});
+  push({id:uid(),type:'line',p1Id:p1,p2Id:p2,color:'#ffd400',thickness:3,dotted:false,label:'P = MR = AR',lox:32,loy:55});
+  // (offset chosen so this clears both the AC/MC curves and their own labels)
+
+  // Q1 reference: drop-line from the tangency point down to the x-axis
+  const eq=uid(), qx=uid();
+  push({id:eq,type:'point',ex:5,ey:3,color:'#222',size:5,label:''});
+  push({id:qx,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q₁',lox:20,loy:0});
+  push({id:uid(),type:'line',p1Id:qx,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
 }
 
 function tplMonopoly() {
   clearCanvas();
-  state.xLabel='Quantity'; state.yLabel='Price / Cost';
-  // AR = Demand
+  state.xScale=10; state.yScale=10;
+  state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
+  state.xLabel='Q'; state.yLabel='P';
+  // Monopoly economic-profit diagram: profit-maximising quantity Qf=3 is where
+  // MR=MC=4; price Pf=7 is read off demand at Qf; ATC(Qf)≈5.125, so the
+  // shaded rectangle (Pf-ATC)×Qf is the economic profit.
+
+  // D = AR = P
   const d1=uid(),d2=uid();
   push({id:d1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
   push({id:d2,type:'point',ex:10,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#00aedb',thickness:2,dotted:false,label:'AR = D'});
-  // MR (double slope)
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#1f6fd6',thickness:2,dotted:false,label:'D = AR = P',lox:68,loy:39});
+
+  // MR (double slope, same intercept as AR)
   const mr1=uid(),mr2=uid();
   push({id:mr1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
   push({id:mr2,type:'point',ex:5,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:mr1,p2Id:mr2,color:'#a200ff',thickness:2,dotted:false,label:'MR'});
-  // MC (upward sloping)
-  const mc1=uid(),mc2=uid();
-  push({id:mc1,type:'point',ex:0,ey:1.5,color:'transparent',size:0,label:''});
-  push({id:mc2,type:'point',ex:9,ey:7,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:mc1,p2Id:mc2,color:'#8ec127',thickness:2,dotted:false,label:'MC'});
-  // Qm ≈ 3 (MR=MC)
-  const qmpt=uid();
-  push({id:qmpt,type:'point',ex:3,ey:3.5,color:'transparent',size:0,label:''});
-  // Pm (price on AR at Qm) ≈ 7
-  const pmpt=uid(), pvpt=uid();
-  push({id:pmpt,type:'point',ex:0,ey:7,color:'transparent',size:0,label:'Pm'});
-  push({id:pvpt,type:'point',ex:3,ey:0,color:'transparent',size:0,label:'Qm'});
-  const top=uid();
-  push({id:top,type:'point',ex:3,ey:7,color:'#d41243',size:6,label:''});
-  push({id:uid(),type:'line',p1Id:pmpt,p2Id:top,color:'#aaa',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:pvpt,p2Id:top,color:'#aaa',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:top,p2Id:qmpt,color:'#aaa',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'point',ex:3,ey:3.5,color:'#d41243',size:5,label:'MR=MC'});
+  push({id:uid(),type:'line',p1Id:mr1,p2Id:mr2,color:'#1f6fd6',thickness:2,dotted:false,label:'MR',lox:-30,loy:25});
+
+  // MC, explicit control point so it passes exactly through (3,4) at t=1/3
+  push({id:uid(),type:'curve',x1:0,y1:1.5,x2:9,y2:9,cpx:4.5,cpy:5.25,curvature:0.5,
+    color:'#4caf50',thickness:2.5,dotted:false,label:'MC',lox:39,loy:0});
+
+  // ATC, U-shaped (symmetric horizontal-tangent construction); ATC(3) ≈ 5.125
+  push({id:uid(),type:'curve',x1:1,y1:7,x2:9,y2:7,cpx:5,cpy:2,curvature:0.5,
+    color:'#f4b400',thickness:2.5,dotted:false,label:'ATC',lox:0,loy:31});
+
+  // Profit-box boundaries: two short horizontal helper lines spanning Q=[0,3],
+  // one at Pf=7 and one at ATC(3)=5.125, shaded between them.
+  const pfL=uid(), pfR=uid(), atcL=uid(), atcR=uid();
+  push({id:pfL,type:'point',ex:0,ey:7,color:'transparent',size:0,label:'Pf',lox:-9,loy:-16});
+  push({id:pfR,type:'point',ex:3,ey:7,color:'transparent',size:0,label:''});
+  push({id:atcL,type:'point',ex:0,ey:5.125,color:'transparent',size:0,label:''});
+  push({id:atcR,type:'point',ex:3,ey:5.125,color:'transparent',size:0,label:''});
+  const pfLine=uid(), atcLine=uid();
+  push({id:pfLine,type:'line',p1Id:pfL,p2Id:pfR,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:atcLine,type:'line',p1Id:atcL,p2Id:atcR,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'shade',boundA:pfLine,boundB:atcLine,color:'#8ec127',opacity:0.35,label:''});
+  push({id:uid(),type:'text',ex:0.6,ey:6.05,text:'Economic Profit',color:'#333',fontSize:13,labelRotation:0});
+
+  // Qf reference: drop-line from the MR=MC point down to the x-axis
+  const mmc=uid(), qf=uid();
+  push({id:mmc,type:'point',ex:3,ey:4,color:'#222',size:5,label:''});
+  push({id:qf,type:'point',ex:3,ey:0,color:'transparent',size:0,label:'Qf',lox:12,loy:0});
+  push({id:uid(),type:'line',p1Id:qf,p2Id:mmc,color:'#999',thickness:1.2,dotted:true,label:''});
 }
 
 function push(o){state.elements.push(o);}
