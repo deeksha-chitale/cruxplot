@@ -96,6 +96,10 @@ main{display:flex;flex:1;overflow:hidden}
 #main-svg.mode-point,#main-svg.mode-line{cursor:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+CjxsaW5lIHgxPSIxMiIgeTE9IjEiIHgyPSIxMiIgeTI9IjIzIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjMiLz4KPGxpbmUgeDE9IjEiIHkxPSIxMiIgeDI9IjIzIiB5Mj0iMTIiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMyIvPgo8bGluZSB4MT0iMTIiIHkxPSIxIiB4Mj0iMTIiIHkyPSIyMyIgc3Ryb2tlPSIjMjIyIiBzdHJva2Utd2lkdGg9IjEiLz4KPGxpbmUgeDE9IjEiIHkxPSIxMiIgeDI9IjIzIiB5Mj0iMTIiIHN0cm9rZT0iIzIyMiIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==') 12 12,crosshair}
 #main-svg.mode-curve{cursor:default}
 #main-svg.mode-text{cursor:text}
+/* While placing a new object, existing elements must not advertise that they
+   are grabbable — keep the placement cursor instead of the move/grab one. */
+#main-svg[class*="mode-"] g[data-id],
+#main-svg[class*="mode-"] g[data-id] *{cursor:inherit!important}
 
 /*  Toolbar  */
 #toolbar{
@@ -112,9 +116,8 @@ main{display:flex;flex:1;overflow:hidden}
 .tool-btn:hover{background:rgba(92,60,146,0.1);border-color:var(--wine)}
 .tool-btn.active{background:var(--gold);color:#fff;border-color:var(--gold)}
 .tool-btn.danger:hover{background:var(--coral);border-color:var(--coral);color:#fff}
-.tool-sep{width:1px;height:28px;background:rgba(92,60,146,0.2);flex-shrink:0}
+.tool-sep{width:3px;height:28px;border-radius:2px;background:rgba(92,60,146,0.38);flex-shrink:0}
 .tool-icon{height:23px;width:auto;display:block}
-.tool-icon-text{font-size:1.4rem;line-height:1;color:currentColor}
 
 /*  Popup  */
 #popup-overlay{
@@ -171,8 +174,8 @@ main{display:flex;flex:1;overflow:hidden}
         <button class="tool-btn" onclick="duplicateSelected()" title="Duplicate (Ctrl+D)"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAD/ElEQVR4nO2bXWhcRRTH/+fcux81AUlStEnRF4svIm2pptBsIGJiwYL6YIom2RYK2mLsqqAP1QcXWqOi0DZEpX5LtxYbUPBBpdqw0E2rtKWUqmiax7TaIkmF2u7d7J0j40fZ2JvgR+fuXSc/WNg598CZe2bOzBnuGWAeu6GwDD3Y8fJC9mNLWbgxDHs+qRL5cuZ0/PzxfD5brpoD1rcN3eKTegbAWgAOwmdKIG+UksmB4S82/hyqA3rad97LQnsBLED1GYPvrMkd7h8PxQHrUoOdCvisSqM+G2NeMtFaORPYhJWOjqyrCK9F7OU1NyeK3pZKAZuwcmNp4e0QLEEEIeAhPUB/tl0TRpTrE9QV0VWGSO9EbOrDuVblq0V3xyv18bL/HAGZSrkAjS3lhqUAjhmbAd71zV8B+HKGkPBsbvSxfWG8vGY433+h5Dp697kCFl58+T9MGB9e69M1XieJPA3IWyL0QO5gZsCErTn7ke+/ECQnQsJoCGh273/qFwDPI+IwLMed7cHDK3bFLiWLXcJ8B4lqEVAsjA4JcA6EE8opfbQ3/+RPVXFAX9tQ10X2XoXQEohAwjsy/G5JAKcc355ODb5wU2FyIIusCi0E0qmdaZD6NAL7eJ0AW8dTjR9kkTUWqlzZ6Fm1fZmA3oxYBnf/qVTDjOzNmAOYnW0A4ogYBNqij9NG14B1rUNNCmp1gI4HogMQ0duaUXToE2glIJcTlT+o43L8HgBvG3OAisutwYui3Jc7mNGnulDo7tx1baLofQugpVJOhOVmQ4DQFKTgNTd/jhDRR1X5axqtEVxn1AEkwUmRTmsRMgQE2TSyFzMsh2E5DMthWA7DchiWw7AchuUwLIdhOQzLYVgOw3IYlsOwHIblMCyHYTkMy2FYDsNyGP9jurv3BX7iE4KywgHJH368O/CBknPGK0RMk07tWAlxeoVk0Swq9QLcGSCfdmP+yZp2QE/7YKsICiD5x/0XwSfv5p84X9MhwCLr/+XgFV3wjMoxhj3o8rwN740++k3NO4CE39Gx/Lf1ge8A6soVMrpwewYuapDdo5uP9q7a0QbmPgKaA5UIJQgmRGFkIj45MluBposaZc+hx48A0L//BMNyGJbDlXdsghTSd71Uh/CpD4xpoxUivpwJ1LiU2KZLzxFS7t7XPrgGQRmcYMKETaosjb24wDsLoAERRBRW7zmU2W9sBrx+bOO0vl2FaPL96fjkiPFFsJRM6pr+U4gWZYA2mbpowZWN325T+Y4+Qo4hGhR1DWeusDkf2jaYO9w/rq+WAXiRgElUhzIIHzvCtwWlr1cTmuuhvl11w3TTMp/VYkfYeA2xIhFSOKvI/fr9wiNTpu3Ng3nwKy0sRMTM1uRwAAAAAElFTkSuQmCC" alt="Duplicate"></button>
         <div class="tool-sep"></div>
         <button class="tool-btn" onclick="showExportMenu()" title="Export"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADoAAAA6CAYAAADhu0ooAAADBElEQVR4nO2ay08TURSHf+dMjWFpgrp30Zpo4gojUNwYg4kosFQG9gIpENdu3beifwCUxoSYiLjysYFBdIeJiQkoa+MDV4aNc4+5k4JlOqVKyzx6+ZJJ2nPnnnO/TnPndYEjWgsKs5idLVwAaICAYwKZLzq59y0nandPXwWpBQBt5dA2hPuLK+Mvw6jPEUlq2kBq0e4pXG8JUTtYcofjEDwJQ5YjlAxVliOWDE2WYyAZiizHRPLQZTlGkocqyyFJbgPYCIhvlNuCZOe9nHEStetIMnATwFpA25pidQ3Ar4C2pp5nudEEQz35K/UkZ5zcq1r9S0uTSwwM7HdkvRpRit7OPjpBQo8PKrmD3qd81INk23QNXSsyUYvciwDaA5q869h/kdzB21e4v4ZsO6nfHZGJuqQ2AShf+MAX616fYFlFYula0YiWliY2QLhXIftNSG40ckei++ocAL6XQ0rXKK6OfYp0Miou5+7DtTKi0JtKuem55YnXjebUORRSaZ1T5/ZqNEgKTaD8azf0i/spOaM/AbxI1P1oHGAYAsMQGIbAMASGITAMgWEIDENgGALDEBiGwDAEhiGkKr+MdE13KnZt/VmEZudWcm+RIEb2Gf/uEbUv57sUq2WARvVGBGeou3AJCaHe+Hl3T4Uh/byroq9F7MWSQZ3x8984nazqLDjdrHEI8NUfI6Evzcpfb/yMkLAUz+kHhxUhF+TqWChwWIVm3oyviiArwEO9EVT3rDP5Lqz6KYRIeRaMZCZnGALDEBiGwDAEhiEwDBQVf6PsvaSKNTXGKlWiQrLl34uANJJDJiD2o0qUJHDVyHm7p3AHMWc4mx8j4Jw/LoL1qmWstzofnLUs+Vgj1wcB1mnvtWpc/q6ZIEkNgzMzzvh61Xrd4Wx+UUB9aA2eFp3cYOCsK25qCoB+AZtoCNhScO9Wxtj/5lqxGkiyLAFbLqvBkjO1ue95VC9wshQ6QHiGhCGCBRduh3b4rzX1I9nptILbJ6AzBJxCDNFPLpjos0vqubdK5giYwR++V0S7PuXU2AAAAABJRU5ErkJggg==" alt="Export"></button>
-        <button class="tool-btn" onclick="exportJSONFile()" title="Save"><span class="tool-icon-text">&#8681;</span></button>
-        <button class="tool-btn" onclick="triggerImportJSON()" title="Load"><span class="tool-icon-text">&#8679;</span></button>
+        <button class="tool-btn" onclick="exportJSONFile()" title="Save"><img class="tool-icon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEd0lEQVR4nOWbXWhcRRTH/+fcm08qJalasQ/WJggqCBrFxt7UhOqDiD65bdNuqhJsHmxSUhARFVdBpSCNWa0QKzY0abRN8UX6ok2J3cRKY9UXUTA1reBH/EpVTJrN3ntkNokmNzd63exH9s4P9mHPzOzM+c+cM3N3uIQ5RBDhr6xVWxlOvYCqAFwJwEBeQd/C5tru048O+6qNGbZZbetYjGMg3Iy8x78I9LfzMD4CcAUCgz8RWC375MwHynmFrIHh9Ier91f+Wy1WMR+MZZ+aCOZMwnPbLwhJY/zXsVjv55G4V8OGmuhDIjg4rztB5+HBlodTGWrYao8A9IzLgWe7B3ZH/NSDbXYrZ5NOe4vgGQ48k+3nNyFpPBzb3beY88uRpHM21yZj/3+sBJ7Z6uahZh55SCoisNc+n08z7yWCaSYsEZz3FsGONWxsu36uAIGjs7/1fEGBXectAq4Sxzg5KwIjoPgVgRFglAjkGHd75wQlgvl+oAXwkxMYGvDPSliIiWUCgwYcYK/bls6VELaiy1eAQwMtJwCoT1ZhaA6n2lBAf7htxLh6ySP6z47JddYHiPi3rAvgiLMwqwrqGqyXb0eGePCOaAUIIV9j8YmZasPrBsY+HbbKf1D76RxzgYD7w1b0KIl8KUQO0gQBFTawGcBKV1E8Xlx8MusCRBBxtuOVdoK86CoqBrBDaMEj9pKQxe0Hek80ZT8EFHF7qp2As8gdI0acXf8NZFGA3tN7JqaE7gfoM2SfEWL73kNndv2S023w7cHm76j0kgXBCwD+ROaJA/Iax/m2rlOtXyz1x8x0jKjrvceU40/urOp4frx0sg5ClUJYTSJpO2cQ0ajK9irhLSXmM3oSfP1s0ziA48gjGJrD0ByG5pipNtxZ1VE6UTK5SUDrAFGHn6xDRHEBvjGNRF9nf+vFrAgQqt2/oihhPzWOyWYApYuf0TKPyHTfiYQxFbaibxYQnj4Ya/kpYyGwo3rfmqKEPQjg8Wnnlw0FAJqmBEPba6I3ZESAUPW+EofNdwHchOXLNXBwvL72pcvTLkChYezJh0tUIqw1EoXPpTUHRBDhYZCKeTeXQHQEIuqxOAdQGSBbPB6RG0N3dTzh58Ro+unm3IZVtwCy2mWecgh39sSazyCHbLPa9jKMT1wiFBZPTG4C8E5aQsBhWeth7uuJteTUeUXPQOvXAB1x2x3CtX7as89KK9w2EeRo2XvhfO+2EOQyPy0ZmsPQHIbmMDSHoTkMzWFoDkNzGJrD0ByG5jA0h6E5DM1haA5Dcxiaw9AcBmC7jaEbI4UIGM33RIs8zLYS4Ee3taSsfCMCxtjv7OXTqPpb/GMA9821OsAb4Q2vPjJ58ecP8vntkdnVXLiyvBbkHHCXiWCIGmrat4rQW9ARkS1cERs7CkBdLOgFYahycOyYenPUIaYHvHJBgBl1bA4p35PbYNep5hFiWj+TD4INYcg07fU9H+66MP11DuoS9FxN2WYB1UNwKwB1H5hnr88vQG3zo8mEB+lRy17N/GzhXxsAtyrlG3vYAAAAAElFTkSuQmCC" alt="Save"></button>
+        <button class="tool-btn" onclick="triggerImportJSON()" title="Load"><img class="tool-icon" src="data:image/png;base64,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" alt="Load"></button>
       </div>
       <input type="file" id="import-file-input" accept=".json" style="display:none">
     </div>
@@ -254,26 +257,6 @@ function redo() {
   if (redoStack.length === 0) return;
   undoStack.push(snapshotState());
   restoreSnapshot(redoStack.pop());
-}
-
-/* =====================================================================
-   AUTOSAVE (localStorage)
-   ===================================================================== */
-const AUTOSAVE_KEY = 'cruxplot-autosave-v1';
-let autoSaveTimer = null;
-function autoSave() {
-  try { localStorage.setItem(AUTOSAVE_KEY, snapshotState()); } catch(e) {}
-}
-function scheduleAutoSave() {
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(autoSave, 500);
-}
-function tryAutoRestore() {
-  try {
-    const saved = localStorage.getItem(AUTOSAVE_KEY);
-    if (saved) { Object.assign(state, JSON.parse(saved)); return true; }
-  } catch(e) {}
-  return false;
 }
 
 /* =====================================================================
@@ -370,6 +353,29 @@ function qBezTan(p0, cp, p1, t) {
     x: 2*mt*(cp.x - p0.x) + 2*t*(p1.x - cp.x),
     y: 2*mt*(cp.y - p0.y) + 2*t*(p1.y - cp.y)
   };
+}
+/* Point on a curve at parameter t, in econ space. */
+function qBezEcon(el, t) {
+  return qBez({x:el.x1,y:el.y1}, econCurveCP(el), {x:el.x2,y:el.y2}, t);
+}
+/* Grow/shrink a curve by `factor` about a fixed point. For a curve that is
+   tangent to something we scale about the tangency point: uniform scaling
+   keeps that point put and preserves tangent directions, so the curve stays
+   tangent to the same line at the same place. Otherwise we scale about the
+   midpoint of its chord. A derived control point (no cpx/cpy) needs no special
+   handling — it is rebuilt from the endpoints, which scale with everything. */
+function scaleCurve(el, factor) {
+  if (!(factor > 0)) return;
+  const c = (el.tanT !== undefined)
+    ? qBezEcon(el, el.tanT)
+    : {x:(el.x1+el.x2)/2, y:(el.y1+el.y2)/2};
+  const s = (x,y) => ({x: c.x + (x-c.x)*factor, y: c.y + (y-c.y)*factor});
+  const p1 = s(el.x1, el.y1), p2 = s(el.x2, el.y2);
+  el.x1=p1.x; el.y1=p1.y; el.x2=p2.x; el.y2=p2.y;
+  if (el.cpx !== undefined && el.cpy !== undefined) {
+    const pc = s(el.cpx, el.cpy);
+    el.cpx=pc.x; el.cpy=pc.y;
+  }
 }
 function curveCP(el) {
   if (el.cpx !== undefined && el.cpy !== undefined) return econToSVG(el.cpx, el.cpy);
@@ -670,11 +676,11 @@ function renderCanvas() {
   //  axis labels
   const xLabelY = state.xTicks.enabled ? SVG_H-PB+31 : SVG_H-PB+18;
   svg.appendChild(txt('text',{
-    x:SVG_W-PR-4, y:xLabelY,
-    'text-anchor':'end','font-family':'Prompt,sans-serif',
+    x:(PL+SVG_W-PR)/2, y:xLabelY,
+    'text-anchor':'middle','font-family':'Prompt,sans-serif',
     'font-size':14,'font-style':'italic',fill:'#333'
   }, state.xLabel));
-  const yLabelX = state.yTicks.enabled ? 11 : 24;
+  const yLabelX = state.yTicks.enabled ? 18 : 36;
   svg.appendChild(txt('text',{
     x:yLabelX,y:SVG_H/2,'text-anchor':'middle',
     'font-family':'Prompt,sans-serif','font-size':14,'font-style':'italic',fill:'#333',
@@ -761,7 +767,6 @@ function renderCanvas() {
   }
 
   refreshEquationBox();
-  scheduleAutoSave();
 }
 
 /* =====================================================================
@@ -794,9 +799,11 @@ function drawElement(elem) {
     g.appendChild(el('path',{d,stroke:col,'stroke-width':th,fill:'none','stroke-dasharray':da,'stroke-linecap':'round'}));
     g.addEventListener('mousedown',handleMousedown);
 
-    // Endpoint handles (not for tangent-curves — their shape is fixed by the tangency constraint)
+    // Endpoint handles (not for tangent-curves — their shape is fixed by the
+    // tangency constraint — and not when the user has hidden them). The
+    // endpoints themselves are unchanged either way; only the handles go.
     const p1s = econToSVG(elem.x1,elem.y1), p2s = econToSVG(elem.x2,elem.y2);
-    if (!isTangentCurve) {
+    if (!isTangentCurve && !elem.hideHandles) {
       [[p1s,'h1'],[p2s,'h2']].forEach(([p,hid])=>{
         const hg = el('g',{'data-id':elem.id,'data-h':hid,cursor:'grab'});
         hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:8,fill:'rgba(255,255,255,0.8)',stroke:col,'stroke-width':1.5}));
@@ -965,6 +972,8 @@ function handleMousedown(e) {
       ox1:elem.x1,oy1:elem.y1,ox2:elem.x2,oy2:elem.y2};
   } else if (elem.type==='curve' && !h && elem.lineId!==undefined) {
     drag={type:'tangentcurve-slide', id:tid};
+  } else if (elem.type==='curve' && !h && elem.slideLineId!==undefined) {
+    drag={type:'curve-slide', id:tid};
   } else if (elem.type==='curve' && !h) {
     drag={type:'curve-body', id:tid, startSP:sp,
       ox1:elem.x1,oy1:elem.y1,ox2:elem.x2,oy2:elem.y2,
@@ -1220,6 +1229,29 @@ svg.addEventListener('mousemove', e=>{
     const segLen2=(p2.x-p1.x)*(p2.x-p1.x)+(p2.y-p1.y)*(p2.y-p1.y);
     let t = segLen2>0 ? ((sp.x-p1.x)*(p2.x-p1.x)+(sp.y-p1.y)*(p2.y-p1.y))/segLen2 : 0;
     elem.t=Math.max(0,Math.min(1,t));
+    renderCanvas();
+
+  } else if (drag.type==='curve-slide') {
+    // A curve that is tangent to a straight line stays tangent under any
+    // translation ALONG that line, so sliding is a rigid shift of every
+    // control point by (projected mouse position - current tangency point).
+    const elem=state.elements.find(x=>x.id===drag.id);
+    const host=elem&&state.elements.find(x=>x.id===elem.slideLineId);
+    const geo=host&&getLineGeometry(host);
+    if (!elem||!geo) return;
+    const {a,b}=geo;
+    const me=svgToEcon(sp.x,sp.y);
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len2=dx*dx+dy*dy;
+    let u = len2>0 ? ((me.x-a.x)*dx+(me.y-a.y)*dy)/len2 : 0;
+    u = Math.max(0, Math.min(1, u));
+    const target={x:a.x+dx*u, y:a.y+dy*u};
+    const t=elem.tanT!==undefined?elem.tanT:0.5;
+    const cur=qBezEcon(elem, t);
+    const shiftX=target.x-cur.x, shiftY=target.y-cur.y;
+    elem.x1+=shiftX; elem.y1+=shiftY;
+    elem.x2+=shiftX; elem.y2+=shiftY;
+    if (elem.cpx!==undefined) { elem.cpx+=shiftX; elem.cpy+=shiftY; }
     renderCanvas();
 
   } else if (drag.type==='tangent-t') {
@@ -2255,6 +2287,9 @@ function renderLeftSidebar() {
   sb.innerHTML='';
 
   const sel=state.elements.find(e=>e.id===state.selectedId);
+  // The axes are selectable too; they are not entries in state.elements, so
+  // they carry a string id rather than a numeric one.
+  const axisSel = (state.selectedId==='xaxis'||state.selectedId==='yaxis') ? state.selectedId : null;
 
   //  equation editor
   const secEq=sec('Equation');
@@ -2287,16 +2322,33 @@ function renderLeftSidebar() {
   } else {
     const p=document.createElement('p');
     p.className='no-sel';
-    p.textContent = state.selectedIds.size>1
-      ? `${state.selectedIds.size} elements selected.`
-      : 'Select an element to view or edit its equation.';
+    p.textContent = axisSel
+      ? (axisSel==='xaxis' ? 'y = 0   (the horizontal axis)' : 'x = 0   (the vertical axis)')
+      : state.selectedIds.size>1
+        ? `${state.selectedIds.size} elements selected.`
+        : 'Select an element to view or edit its equation.';
     secEq.appendChild(p);
   }
   sb.appendChild(secEq);
 
   //  element properties
   const secEl=sec('Element Properties');
-  if (sel) {
+  if (axisSel) {
+    const isX = axisSel==='xaxis';
+    const p=document.createElement('p');
+    p.className='hint-text';
+    p.innerHTML = isX ? '<b>X axis</b> selected.' : '<b>Y axis</b> selected.';
+    secEl.appendChild(p);
+    secEl.appendChild(ctrlRow('Axis Label', inputTxt(isX?state.xLabel:state.yLabel,
+      v=>{ if(isX) state.xLabel=v; else state.yLabel=v; renderCanvas(); })));
+    secEl.appendChild(ctrlRow('Scale', inputNum(isX?state.xScale:state.yScale, 1, 1e6,
+      v=>{ if(isX) state.xScale=v; else state.yScale=v; renderCanvas(); }, 'any')));
+    const ticks = isX ? state.xTicks : state.yTicks;
+    const tcb=document.createElement('input');
+    tcb.type='checkbox'; tcb.checked=ticks.enabled;
+    tcb.addEventListener('change',()=>{pushUndo();ticks.enabled=tcb.checked;render();});
+    secEl.appendChild(ctrlRow('Tick Labels', tcb));
+  } else if (sel) {
     if (sel.type==='text') {
       secEl.appendChild(ctrlRow('Text', inputTxt(sel.text||'', v=>{sel.text=v;renderCanvas();})));
       secEl.appendChild(ctrlRow('Font Size', rangeCtrl(sel.fontSize||14,10,36,1, v=>{sel.fontSize=v;renderCanvas();})));
@@ -2347,6 +2399,27 @@ function renderLeftSidebar() {
         secEl.appendChild(ctrlRow('Position', rangeCtrl(sel.t,0,1,0.01, v=>{sel.t=v;renderCanvas();})));
       } else if (sel.cpx===undefined) {
         secEl.appendChild(ctrlRow('Curvature', rangeCtrl(sel.curvature||0.72,0,1,0.02, v=>{sel.curvature=v;renderCanvas();})));
+      }
+
+      // Size is cumulative: the slider holds the total scale applied so far and
+      // each change applies only the difference, so the geometry stays the
+      // single source of truth and dragging back to 1 restores the original.
+      if (sel.lineId===undefined) {
+        secEl.appendChild(ctrlRow('Size', rangeCtrl(sel.scale||1, 0.2, 3, 0.05, v=>{
+          const cur = sel.scale || 1;
+          if (v>0 && Math.abs(v-cur) > 1e-9) { scaleCurve(sel, v/cur); sel.scale = v; }
+          renderCanvas();
+        })));
+      }
+
+      // The endpoints stay part of the curve; this only hides their handles.
+      if (sel.lineId===undefined) {
+        const epRow=ctrlRow('Hide Endpoints');
+        const epCb=document.createElement('input');
+        epCb.type='checkbox'; epCb.checked=!!sel.hideHandles;
+        epCb.addEventListener('change',()=>{pushUndo();sel.hideHandles=epCb.checked;renderCanvas();});
+        epRow.appendChild(epCb);
+        secEl.appendChild(epRow);
       }
 
       const btn1=document.createElement('button');
@@ -2575,6 +2648,7 @@ function clearCanvas() {
 
 function tplSupplyDemand() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=10; state.yScale=10;
   state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
   state.xLabel='Quantity'; state.yLabel='Price ($)';
@@ -2586,35 +2660,36 @@ function tplSupplyDemand() {
   const d1=uid(),d2=uid();
   push({id:d1,type:'point',ex:0.5,ey:9,color:'transparent',size:0,label:''});
   push({id:d2,type:'point',ex:9.5,ey:1,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#222',thickness:2.5,dotted:false,label:'D₀',lox:-90,loy:-32});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#1a1a1a',thickness:2.5,dotted:false,label:'D₀',lox:-90,loy:-32});
 
   // Supply S0: (0.5,1) -> (9.5,9)
   const s1=uid(),s2=uid();
   push({id:s1,type:'point',ex:0.5,ey:1,color:'transparent',size:0,label:''});
   push({id:s2,type:'point',ex:9.5,ey:9,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:s1,p2Id:s2,color:'#222',thickness:2.5,dotted:false,label:'S₀',lox:97,loy:-57});
+  push({id:uid(),type:'line',p1Id:s1,p2Id:s2,color:'#1a1a1a',thickness:2.5,dotted:false,label:'S₀',lox:97,loy:-57});
 
   // P1 = 3 (below the D0/S0 crossing at price 5): A on S0 at Q1=2.75, B on D0 at Q2=7.25
   const zero=uid();
-  push({id:zero,type:'point',ex:0,ey:3,color:'transparent',size:0,label:'P₁'});
+  push({id:zero,type:'point',ex:0,ey:3,color:'transparent',size:0,label:'P₁',labelColor:'#1a1a1a'});
   const ptA=uid(), ptB=uid();
-  push({id:ptA,type:'point',ex:2.75,ey:3,color:'#d41243',size:6,label:'A',lox:-4,loy:-14});
-  push({id:ptB,type:'point',ex:7.25,ey:3,color:'#d41243',size:6,label:'B',lox:6,loy:-14});
-  push({id:uid(),type:'line',p1Id:zero,p2Id:ptB,color:'#d41243',thickness:1.5,dotted:true,label:''});
+  push({id:ptA,type:'point',ex:2.75,ey:3,color:'#a63a2b',size:6,label:'A',lox:-4,loy:-14});
+  push({id:ptB,type:'point',ex:7.25,ey:3,color:'#a63a2b',size:6,label:'B',lox:6,loy:-14});
+  push({id:uid(),type:'line',p1Id:zero,p2Id:ptB,color:'#a63a2b',thickness:1.5,dotted:true,label:''});
 
   // Vertical drop-lines to Q1 and Q2 on the x-axis
   const q1x=uid(), q2x=uid();
-  push({id:q1x,type:'point',ex:2.75,ey:0,color:'transparent',size:0,label:'Q₁'});
-  push({id:q2x,type:'point',ex:7.25,ey:0,color:'transparent',size:0,label:'Q₂'});
-  push({id:uid(),type:'line',p1Id:q1x,p2Id:ptA,color:'#1f6fd6',thickness:1.5,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:q2x,p2Id:ptB,color:'#1f6fd6',thickness:1.5,dotted:true,label:''});
+  push({id:q1x,type:'point',ex:2.75,ey:0,color:'transparent',size:0,label:'Q₁',labelColor:'#1a1a1a'});
+  push({id:q2x,type:'point',ex:7.25,ey:0,color:'transparent',size:0,label:'Q₂',labelColor:'#1a1a1a'});
+  push({id:uid(),type:'line',p1Id:q1x,p2Id:ptA,color:'#1f3a5f',thickness:1.5,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:q2x,p2Id:ptB,color:'#1f3a5f',thickness:1.5,dotted:true,label:''});
 
-  push({id:uid(),type:'text',ex:3.4,ey:2.15,text:'Market Shortage',color:'#d41243',fontSize:14,label:''});
-  push({id:uid(),type:'text',ex:4.05,ey:1.55,text:'Qd > Qs',color:'#d41243',fontSize:14,label:''});
+  push({id:uid(),type:'text',ex:3.4,ey:2.15,text:'Market Shortage',color:'#a63a2b',fontSize:14,label:''});
+  push({id:uid(),type:'text',ex:4.05,ey:1.55,text:'Qd > Qs',color:'#a63a2b',fontSize:14,label:''});
 }
 
 function tplPPF() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=10; state.yScale=10;
   state.xTicks={enabled:true,start:0,end:10,step:2.25}; state.yTicks={enabled:true,start:0,end:10,step:2.5};
   state.xLabel='Consumer goods'; state.yLabel='Capital goods';
@@ -2622,16 +2697,16 @@ function tplPPF() {
   // the shape and every tangency/passage relationship are identical.
   // Curve endpoints (0,10)-(10,0) with an explicit control point chosen so
   // the curve passes exactly through the Pareto-efficient point (6.75, 8).
-  push({id:uid(),type:'curve',shape:'concave',x1:0,y1:10,x2:10,y2:0,cpx:8.5,cpy:11,
-    curvature:0.75,color:'#000',thickness:2.5,dotted:false,label:'PPF',lox:-40,loy:-15});
+  push({id:uid(),type:'curve',hideHandles:true,shape:'concave',x1:0,y1:10,x2:10,y2:0,cpx:8.5,cpy:11,
+    curvature:0.75,color:'#1a1a1a',thickness:2.5,dotted:false,label:'PPF',lox:-243,loy:-60});
 
   // Pareto-efficient point, on the frontier, with dotted reference lines to both axes
   const eff=uid(), effX=uid(), effY=uid();
   push({id:effX,type:'point',ex:6.75,ey:0,color:'transparent',size:0,label:''});
   push({id:effY,type:'point',ex:0,ey:8,color:'transparent',size:0,label:''});
-  push({id:eff,type:'point',ex:6.75,ey:8,color:'#d41243',size:6,label:'Pareto Efficiency',lox:10,loy:-8});
-  push({id:uid(),type:'line',p1Id:effX,p2Id:eff,color:'#d41243',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:effY,p2Id:eff,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:eff,type:'point',ex:6.75,ey:8,color:'#a63a2b',size:6,label:'Pareto Efficiency',lox:10,loy:-8});
+  push({id:uid(),type:'line',p1Id:effX,p2Id:eff,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:effY,p2Id:eff,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
 
   // Attainable (inefficient) point inside the frontier, at the same capital-goods
   // level (5) as the frontier point further out (~8.7,5) - the horizontal
@@ -2639,31 +2714,33 @@ function tplPPF() {
   const att=uid(), attX=uid(), attY=uid(), frontierAtY=uid(), frontierAtX=uid();
   push({id:attX,type:'point',ex:4.5,ey:0,color:'transparent',size:0,label:''});
   push({id:attY,type:'point',ex:0,ey:5,color:'transparent',size:0,label:''});
-  push({id:att,type:'point',ex:4.5,ey:5,color:'#d41243',size:6,label:'Attainable',lox:10,loy:-8});
+  push({id:att,type:'point',ex:4.5,ey:5,color:'#a63a2b',size:6,label:'Attainable',lox:12,loy:-14});
   push({id:frontierAtY,type:'point',ex:8.7,ey:5,color:'transparent',size:0,label:''});
   push({id:frontierAtX,type:'point',ex:8.7,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:attX,p2Id:att,color:'#d41243',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:attY,p2Id:frontierAtY,color:'#d41243',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:frontierAtX,p2Id:frontierAtY,color:'#d41243',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:attX,p2Id:att,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:attY,p2Id:frontierAtY,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:frontierAtX,p2Id:frontierAtY,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
 
   // Unattainable point, outside the frontier
-  push({id:uid(),type:'point',ex:7.5,ey:9.5,color:'#d41243',size:6,label:'Unattainable',lox:10,loy:-8});
+  push({id:uid(),type:'point',ex:7.5,ey:9.5,color:'#a63a2b',size:6,label:'Unattainable',lox:10,loy:-8});
 }
 
 function tplICMap() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=10; state.yScale=10;
   state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
   state.xLabel='Good X'; state.yLabel='Good Y';
-  const cols=['#00aedb','#a200ff','#8ec127'];
+  const cols=['#1f3a5f','#1f3a5f','#1f3a5f'];
   [[1.5,8.5,8.5,1.5],[3,8.5,8.5,3],[5,8.5,8.5,5]].forEach(([x1,y1,x2,y2],i)=>{
-    push({id:uid(),type:'curve',shape:'convex',x1,y1,x2,y2,
+    push({id:uid(),type:'curve',hideHandles:true,shape:'convex',x1,y1,x2,y2,
       curvature:0.7,color:cols[i],thickness:2,dotted:false,label:`U${i+1}`});
   });
 }
 
 function tplBudget() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=16; state.yScale=16;
   state.xTicks={enabled:true,start:0,end:16,step:1}; state.yTicks={enabled:true,start:0,end:16,step:1};
   state.xLabel='Oranges (x)'; state.yLabel='Apples (y)';
@@ -2680,79 +2757,87 @@ function tplBudget() {
   // tangency (Mx,My) with slope -mag, the remaining unknowns b, h and the
   // parameter t are fully determined, so the tangency is exact:
   //   x(t) = a + (b-a)t^2 , y(t) = k + (h-k)(1-t)^2
+  // tanT is the curve parameter at the tangency, so the curve can be dragged
+  // along its budget line while staying tangent (see the 'curve-slide' drag).
   const icCurve = (a,k,Mx,My,mag) => {
     const t = mag*(Mx-a) / ((My-k) + mag*(Mx-a));
-    return {x1:a, y1:k + (My-k)/((1-t)*(1-t)), x2:a + (Mx-a)/(t*t), y2:k, cpx:a, cpy:k};
+    return {x1:a, y1:k + (My-k)/((1-t)*(1-t)), x2:a + (Mx-a)/(t*t), y2:k, cpx:a, cpy:k, tanT:t};
   };
 
   // Original (steeper) budget line: (0,15) -> (5,0)
-  const b1=uid(), b2=uid();
+  const b1=uid(), b2=uid(), steepLine=uid();
   push({id:b1,type:'point',ex:0,ey:15,color:'transparent',size:0,label:''});
   push({id:b2,type:'point',ex:5,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:b1,p2Id:b2,color:'#e8541e',thickness:2.5,dotted:false,label:''});
+  push({id:steepLine,type:'line',p1Id:b1,p2Id:b2,color:'#a63a2b',thickness:2.5,dotted:false,label:''});
 
   // New (shallower) budget line after the price fall: (0,15) -> (15,0)
-  const b3=uid(), b4=uid();
+  const b3=uid(), b4=uid(), shallowLine=uid();
   push({id:b3,type:'point',ex:0,ey:15,color:'transparent',size:0,label:''});
   push({id:b4,type:'point',ex:15,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:b3,p2Id:b4,color:'#e8541e',thickness:2.5,dotted:false,label:''});
+  push({id:shallowLine,type:'line',p1Id:b3,p2Id:b4,color:'#a63a2b',thickness:2.5,dotted:false,label:''});
 
   // Smaller indifference curve, tangent to the steep line (slope -3) at (3,6)
-  push({id:uid(),type:'curve',...icCurve(2.2,1.5,3,6,3),curvature:0.5,
-    color:'#000',thickness:2,dotted:false,label:''});
+  push({id:uid(),type:'curve',hideHandles:true,...icCurve(2.2,1.5,3,6,3),curvature:0.5,slideLineId:steepLine,
+    color:'#1a1a1a',thickness:2,dotted:false,label:''});
   const t1x=uid(), t1y=uid();
   push({id:t1x,type:'point',ex:3,ey:0,color:'transparent',size:0,label:''});
   push({id:t1y,type:'point',ex:0,ey:6,color:'transparent',size:0,label:''});
   const t1=uid();
   push({id:t1,type:'point',ex:3,ey:6,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:t1x,p2Id:t1,color:'#555',thickness:1,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:t1y,p2Id:t1,color:'#555',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t1x,p2Id:t1,color:'#8a8a8a',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t1y,p2Id:t1,color:'#8a8a8a',thickness:1,dotted:true,label:''});
 
   // Larger indifference curve, tangent to the shallow line (slope -1) at (7,8)
-  push({id:uid(),type:'curve',...icCurve(4.5,5.2,7,8,1),curvature:0.5,
-    color:'#000',thickness:2,dotted:false,label:''});
+  push({id:uid(),type:'curve',hideHandles:true,...icCurve(4.5,5.2,7,8,1),curvature:0.5,slideLineId:shallowLine,
+    color:'#1a1a1a',thickness:2,dotted:false,label:''});
   const t2x=uid(), t2y=uid();
   push({id:t2x,type:'point',ex:7,ey:0,color:'transparent',size:0,label:''});
   push({id:t2y,type:'point',ex:0,ey:8,color:'transparent',size:0,label:''});
   const t2=uid();
   push({id:t2,type:'point',ex:7,ey:8,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:t2x,p2Id:t2,color:'#555',thickness:1,dotted:true,label:''});
-  push({id:uid(),type:'line',p1Id:t2y,p2Id:t2,color:'#555',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t2x,p2Id:t2,color:'#8a8a8a',thickness:1,dotted:true,label:''});
+  push({id:uid(),type:'line',p1Id:t2y,p2Id:t2,color:'#8a8a8a',thickness:1,dotted:true,label:''});
 }
 
 function tplPerfectComp() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=10; state.yScale=10;
   state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
   state.xLabel='Output/Sales'; state.yLabel='Cost/Revenue';
   // Long-run zero-economic-profit equilibrium: MC crosses AC exactly at AC's
   // minimum, and P = MR = AR passes through that same point (5,3).
 
+  // P = MR = AR: horizontal line at the zero-profit price level.
+  // Declared first so the AC curve can reference it as its slide host.
+  const p1=uid(), p2=uid(), priceLine=uid();
+
   // AC (U-shaped, symmetric endpoints give a horizontal tangent at its t=0.5
-  // minimum by construction) - minimum sits exactly at (5,3).
-  push({id:uid(),type:'curve',x1:1.5,y1:6,x2:8.5,y2:6,cpx:5,cpy:0,curvature:0.5,
-    color:'#f47835',thickness:2,dotted:false,label:'AC',lox:15,loy:26});
+  // minimum by construction) - minimum sits exactly at (5,3), on the price
+  // line, so AC slides along that line while staying tangent to it.
+  push({id:uid(),type:'curve',hideHandles:true,x1:1.5,y1:6,x2:8.5,y2:6,cpx:5,cpy:0,curvature:0.5,
+    slideLineId:priceLine,tanT:0.5,
+    color:'#a63a2b',thickness:2,dotted:false,label:'AC',lox:15,loy:26});
 
   // MC (rising), explicit control point so it crosses AC exactly at its minimum (5,3)
-  push({id:uid(),type:'curve',x1:2,y1:0.5,x2:8.5,y2:9.5,cpx:4.75,cpy:1,curvature:0.5,
-    color:'#7fd0e8',thickness:2,dotted:false,label:'MC',lox:-23,loy:-39});
+  push({id:uid(),type:'curve',hideHandles:true,x1:2,y1:0.5,x2:8.5,y2:9.5,cpx:4.75,cpy:1,curvature:0.5,
+    color:'#1f3a5f',thickness:2,dotted:false,label:'MC',lox:-23,loy:-39});
 
-  // P = MR = AR: horizontal line at the zero-profit price level
-  const p1=uid(), p2=uid();
   push({id:p1,type:'point',ex:0,ey:3,color:'transparent',size:0,label:''});
   push({id:p2,type:'point',ex:9.5,ey:3,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:p1,p2Id:p2,color:'#ffd400',thickness:3,dotted:false,label:'P = MR = AR',lox:32,loy:55});
+  push({id:priceLine,type:'line',p1Id:p1,p2Id:p2,color:'#4a7c59',thickness:3,dotted:false,label:'P = MR = AR',lox:32,loy:55});
   // (offset chosen so this clears both the AC/MC curves and their own labels)
 
   // Q1 reference: drop-line from the tangency point down to the x-axis
   const eq=uid(), qx=uid();
-  push({id:eq,type:'point',ex:5,ey:3,color:'#222',size:5,label:''});
-  push({id:qx,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q₁',lox:20,loy:0});
-  push({id:uid(),type:'line',p1Id:qx,p2Id:eq,color:'#999',thickness:1.2,dotted:true,label:''});
+  push({id:eq,type:'point',ex:5,ey:3,color:'#1a1a1a',size:5,label:''});
+  push({id:qx,type:'point',ex:5,ey:0,color:'transparent',size:0,label:'Q₁',labelColor:'#1a1a1a',lox:20,loy:0});
+  push({id:uid(),type:'line',p1Id:qx,p2Id:eq,color:'#8a8a8a',thickness:1.2,dotted:true,label:''});
 }
 
 function tplMonopoly() {
   clearCanvas();
+  state.showGrid=false;
   state.xScale=10; state.yScale=10;
   state.xTicks={enabled:false,start:0,end:10,step:1}; state.yTicks={enabled:false,start:0,end:10,step:1};
   state.xLabel='Q'; state.yLabel='P';
@@ -2764,40 +2849,40 @@ function tplMonopoly() {
   const d1=uid(),d2=uid();
   push({id:d1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
   push({id:d2,type:'point',ex:10,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#1f6fd6',thickness:2,dotted:false,label:'D = AR = P',lox:68,loy:39});
+  push({id:uid(),type:'line',p1Id:d1,p2Id:d2,color:'#1f3a5f',thickness:2,dotted:false,label:'D = AR = P',lox:68,loy:39});
 
   // MR (double slope, same intercept as AR)
   const mr1=uid(),mr2=uid();
   push({id:mr1,type:'point',ex:0,ey:10,color:'transparent',size:0,label:''});
   push({id:mr2,type:'point',ex:5,ey:0,color:'transparent',size:0,label:''});
-  push({id:uid(),type:'line',p1Id:mr1,p2Id:mr2,color:'#1f6fd6',thickness:2,dotted:false,label:'MR',lox:-30,loy:25});
+  push({id:uid(),type:'line',p1Id:mr1,p2Id:mr2,color:'#1f3a5f',thickness:2,dotted:false,label:'MR',lox:-30,loy:25});
 
   // MC, explicit control point so it passes exactly through (3,4) at t=1/3
-  push({id:uid(),type:'curve',x1:0,y1:1.5,x2:9,y2:9,cpx:4.5,cpy:5.25,curvature:0.5,
-    color:'#4caf50',thickness:2.5,dotted:false,label:'MC',lox:39,loy:0});
+  push({id:uid(),type:'curve',hideHandles:true,x1:0,y1:1.5,x2:9,y2:9,cpx:4.5,cpy:5.25,curvature:0.5,
+    color:'#4a7c59',thickness:2.5,dotted:false,label:'MC',lox:39,loy:0});
 
   // ATC, U-shaped (symmetric horizontal-tangent construction); ATC(3) ≈ 5.125
-  push({id:uid(),type:'curve',x1:1,y1:7,x2:9,y2:7,cpx:5,cpy:2,curvature:0.5,
-    color:'#f4b400',thickness:2.5,dotted:false,label:'ATC',lox:0,loy:31});
+  push({id:uid(),type:'curve',hideHandles:true,x1:1,y1:7,x2:9,y2:7,cpx:5,cpy:2,curvature:0.5,
+    color:'#8a6d1f',thickness:2.5,dotted:false,label:'ATC',lox:0,loy:31});
 
   // Profit-box boundaries: two short horizontal helper lines spanning Q=[0,3],
   // one at Pf=7 and one at ATC(3)=5.125, shaded between them.
   const pfL=uid(), pfR=uid(), atcL=uid(), atcR=uid();
-  push({id:pfL,type:'point',ex:0,ey:7,color:'transparent',size:0,label:'Pf',lox:-9,loy:-16});
+  push({id:pfL,type:'point',ex:0,ey:7,color:'transparent',size:0,label:'Pf',labelColor:'#1a1a1a',lox:-9,loy:-16});
   push({id:pfR,type:'point',ex:3,ey:7,color:'transparent',size:0,label:''});
   push({id:atcL,type:'point',ex:0,ey:5.125,color:'transparent',size:0,label:''});
   push({id:atcR,type:'point',ex:3,ey:5.125,color:'transparent',size:0,label:''});
   const pfLine=uid(), atcLine=uid();
-  push({id:pfLine,type:'line',p1Id:pfL,p2Id:pfR,color:'#d41243',thickness:1.2,dotted:true,label:''});
-  push({id:atcLine,type:'line',p1Id:atcL,p2Id:atcR,color:'#d41243',thickness:1.2,dotted:true,label:''});
-  push({id:uid(),type:'shade',boundA:pfLine,boundB:atcLine,color:'#8ec127',opacity:0.35,label:''});
-  push({id:uid(),type:'text',ex:0.6,ey:6.05,text:'Economic Profit',color:'#333',fontSize:13,labelRotation:0});
+  push({id:pfLine,type:'line',p1Id:pfL,p2Id:pfR,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
+  push({id:atcLine,type:'line',p1Id:atcL,p2Id:atcR,color:'#a63a2b',thickness:1.2,dotted:true,label:''});
+  push({id:uid(),type:'shade',boundA:pfLine,boundB:atcLine,color:'#4a7c59',opacity:0.35,label:''});
+  push({id:uid(),type:'text',ex:0.6,ey:6.05,text:'Economic Profit',color:'#1a1a1a',fontSize:13,labelRotation:0});
 
   // Qf reference: drop-line from the MR=MC point down to the x-axis
   const mmc=uid(), qf=uid();
-  push({id:mmc,type:'point',ex:3,ey:4,color:'#222',size:5,label:''});
-  push({id:qf,type:'point',ex:3,ey:0,color:'transparent',size:0,label:'Qf',lox:12,loy:0});
-  push({id:uid(),type:'line',p1Id:qf,p2Id:mmc,color:'#999',thickness:1.2,dotted:true,label:''});
+  push({id:mmc,type:'point',ex:3,ey:4,color:'#1a1a1a',size:5,label:''});
+  push({id:qf,type:'point',ex:3,ey:0,color:'transparent',size:0,label:'Qf',labelColor:'#1a1a1a',lox:12,loy:0});
+  push({id:uid(),type:'line',p1Id:qf,p2Id:mmc,color:'#8a8a8a',thickness:1.2,dotted:true,label:''});
 }
 
 function push(o){state.elements.push(o);}
@@ -2855,10 +2940,8 @@ document.addEventListener('keydown', e=>{
    INIT
    ===================================================================== */
 buildRightSidebar();
-if (!tryAutoRestore()) {
-  // No saved work found — load a default template to show off the app
-  tplSupplyDemand();
-}
+// Always open on a blank canvas. Work is kept via the explicit Save / Load
+// buttons rather than being restored automatically.
 render();
 </script>
 </body>
