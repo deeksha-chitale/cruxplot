@@ -12,13 +12,18 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --wine:#5c3c92;--gold:#077b8a;--coral:#d72631;--cream:#ffffff;
+  /* Deep navy header over a light, cool grey workspace. Low chroma so the
+     surround recedes and the plot sheet stays the subject, but far from the
+     header in lightness so the two read as separate bands rather than
+     merging. The sheet gets a hairline + soft shadow to sit clear of it. */
+  --shell:#1c3557;--desk:#dde2ea;
   --text:#3a3a40;--sidebar-w:clamp(160px,20vw,240px);
 }
-html,body{height:100%;font-family:'Prompt',sans-serif;background:var(--wine);color:var(--text);overflow:hidden}
+html,body{height:100%;font-family:'Prompt',sans-serif;background:var(--desk);color:var(--text);overflow:hidden}
 #app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 header{
   display:flex;align-items:center;gap:12px;padding:0 20px;
-  height:64px;background:var(--wine);flex-shrink:0
+  height:64px;background:var(--shell);flex-shrink:0
 }
 header .logo{height:40px;width:auto;display:block}
 header .tagline{color:var(--white);font-size:0.8rem;margin-top:2px}
@@ -27,8 +32,12 @@ main{display:flex;flex:1;overflow:hidden}
 /*  Sidebars  */
 .sidebar{
   width:var(--sidebar-w);background:var(--cream);display:flex;
-  flex-direction:column;overflow-y:auto;overflow-x:hidden;flex-shrink:0
+  flex-direction:column;overflow-y:auto;overflow-x:hidden;flex-shrink:0;
+  /* raised above the workspace so the shadow falls on it, not under it */
+  position:relative;z-index:2
 }
+#left-sidebar{box-shadow:6px 0 18px rgba(12,22,40,0.34)}
+#right-sidebar{box-shadow:-6px 0 18px rgba(12,22,40,0.34)}
 .sidebar::-webkit-scrollbar{width:4px}
 .sidebar::-webkit-scrollbar-thumb{background:rgba(92,60,146,0.3);border-radius:2px}
 .sb-section{padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.1)}
@@ -84,12 +93,12 @@ main{display:flex;flex:1;overflow:hidden}
 /*  Canvas area  */
 #canvas-area{
   flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;background:#3a3a40;padding:12px 10px 8px;gap:8px;
+  justify-content:center;background:var(--desk);padding:12px 10px 8px;gap:8px;
   overflow:hidden;min-height:0
 }
 #svg-wrapper{
-  background:#fff;border-radius:3px;min-height:0;flex-shrink:1;
-  box-shadow:0 4px 28px rgba(0,0,0,0.5);overflow:hidden;position:relative;
+  background:#fff;border-radius:3px;min-height:0;flex-shrink:1;border:1px solid rgba(28,53,87,0.14);
+  box-shadow:0 6px 22px rgba(12,22,40,0.30);overflow:hidden;position:relative;
   display:flex;align-items:center;justify-content:center
 }
 #main-svg{display:block;cursor:default;max-width:100%;max-height:calc(100vh - 132px);width:auto;height:auto;}
@@ -105,7 +114,7 @@ main{display:flex;flex:1;overflow:hidden}
 #toolbar{
   display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;
   background:rgba(255,255,255,0.92);padding:8px 14px;border-radius:16px;
-  backdrop-filter:blur(10px);flex-shrink:0;max-width:100%;box-shadow:0 2px 10px rgba(0,0,0,0.18)
+  backdrop-filter:blur(10px);flex-shrink:0;max-width:100%;box-shadow:0 6px 20px rgba(12,22,40,0.38)
 }
 .tool-btn{
   width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;
@@ -591,7 +600,7 @@ function drawShade(elem) {
     lbl.addEventListener('mousedown',e=>startLabelDrag(elem,0,0,e));
     g.appendChild(lbl);
   }
-  g.addEventListener('click',e=>{if(state.mode!=='select')return;e.stopPropagation();selectEl(elem.id)});
+  g.addEventListener('click',e=>{if(state.mode!=='select')return;e.stopPropagation();if(e.ctrlKey||e.metaKey)return;selectEl(elem.id)});
   svg.appendChild(g);
 }
 function curvePath(el) {
@@ -686,14 +695,6 @@ function renderCanvas() {
     'font-family':'Prompt,sans-serif','font-size':14,'font-style':'italic',fill:'#333',
     transform:`rotate(-90,${yLabelX},${SVG_H/2})`
   }, state.yLabel));
-
-  //  origin (hidden when custom tick labels are shown, to avoid overlap)
-  if (!state.xTicks.enabled && !state.yTicks.enabled) {
-    svg.appendChild(txt('text',{
-      x:PL-6,y:SVG_H-PB+5,'text-anchor':'middle',
-      'font-size':11,fill:'#777','font-family':'Prompt,sans-serif'
-    },'O'));
-  }
 
   //  axis tick labels
   if (state.xTicks.enabled) {
@@ -824,7 +825,7 @@ function drawElement(elem) {
       lbl.addEventListener('mousedown',e=>startLabelDrag(elem,10,-7,e));
       g.appendChild(lbl);
     }
-    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation(); if (e.ctrlKey||e.metaKey) return; selectEl(elem.id)});
     svg.appendChild(g);
 
   } else if (elem.type === 'line') {
@@ -853,7 +854,7 @@ function drawElement(elem) {
       lbl.addEventListener('mousedown',e=>startLabelDrag(elem,8,-6,e));
       g.appendChild(lbl);
     }
-    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation(); if (e.ctrlKey||e.metaKey) return; selectEl(elem.id)});
     svg.appendChild(g);
 
   } else if (elem.type === 'tangent') {
@@ -880,14 +881,16 @@ function drawElement(elem) {
     g.appendChild(el('line',{x1:endA.x,y1:endA.y,x2:endB.x,y2:endB.y,
       stroke:col,'stroke-width':th,'stroke-dasharray':da,'stroke-linecap':'round'}));
 
-    // Endpoint handles (elongate/contract)
-    [[endA,'eA'],[endB,'eB']].forEach(([p,hid])=>{
-      const hg=el('g',{'data-id':elem.id,'data-h':hid,cursor:'ew-resize'});
-      hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:7,fill:'rgba(255,255,255,0.8)',stroke:col,'stroke-width':1.5}));
-      hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:2.5,fill:col}));
-      hg.addEventListener('mousedown',handleMousedown);
-      g.appendChild(hg);
-    });
+    // Endpoint handles (elongate/contract) — hidden on request
+    if (!elem.hideHandles) {
+      [[endA,'eA'],[endB,'eB']].forEach(([p,hid])=>{
+        const hg=el('g',{'data-id':elem.id,'data-h':hid,cursor:'ew-resize'});
+        hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:7,fill:'rgba(255,255,255,0.8)',stroke:col,'stroke-width':1.5}));
+        hg.appendChild(el('circle',{cx:p.x,cy:p.y,r:2.5,fill:col}));
+        hg.addEventListener('mousedown',handleMousedown);
+        g.appendChild(hg);
+      });
+    }
 
     // Draggable point on curve
     const dot=el('circle',{cx:pos.x,cy:pos.y,r:5.5,fill:col,stroke:'#fff','stroke-width':1.5,cursor:'ew-resize'});
@@ -904,7 +907,7 @@ function drawElement(elem) {
       lbl.addEventListener('mousedown',e=>startLabelDrag(elem,8,-8,e));
       g.appendChild(lbl);
     }
-    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation(); if (e.ctrlKey||e.metaKey) return; selectEl(elem.id)});
     svg.appendChild(g);
 
   } else if (elem.type === 'point') {
@@ -925,7 +928,7 @@ function drawElement(elem) {
       g.appendChild(lbl);
     }
     g.addEventListener('mousedown',handleMousedown);
-    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation(); if (e.ctrlKey||e.metaKey) return; selectEl(elem.id)});
     svg.appendChild(g);
 
   } else if (elem.type === 'text') {
@@ -944,7 +947,7 @@ function drawElement(elem) {
     const t=txt('text',attrs,elem.text||'Text');
     g.appendChild(t);
     g.addEventListener('mousedown',handleMousedown);
-    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation();selectEl(elem.id)});
+    g.addEventListener('click',e=>{if (state.mode!=='select') return; e.stopPropagation(); if (e.ctrlKey||e.metaKey) return; selectEl(elem.id)});
     svg.appendChild(g);
   }
 }
@@ -964,6 +967,9 @@ function handleMousedown(e) {
   const h = e.currentTarget.getAttribute('data-h');
   const elem = state.elements.find(x=>x.id===tid);
   if (!elem) return;
+
+  // Ctrl/Cmd+click is a selection gesture, not a move: toggle and stop there.
+  if (e.ctrlKey || e.metaKey) { selectElMaybeAdd(tid, e); e.preventDefault(); return; }
 
   if (elem.type==='point' || elem.type==='text') {
     drag={type:'point', id:tid, startSP:sp, origEx:elem.ex, origEy:elem.ey};
@@ -1120,8 +1126,11 @@ svg.addEventListener('mousedown', e=>{
   if (state.mode !== 'select') return;
   const sp = getSVGPt(e);
   const near = nearestElement(sp.x, sp.y);
-  if (near) { selectEl(near); } else { clearSelection(); render(); }
-  marquee = { startSP: sp, curSP: sp };
+  const additive = e.ctrlKey || e.metaKey;
+  if (near) { selectElMaybeAdd(near, e); }
+  // Ctrl+click on empty space must not wipe an existing selection.
+  else if (!additive) { clearSelection(); render(); }
+  marquee = { startSP: sp, curSP: sp, additive };
 });
 
 svg.addEventListener('mousemove', e=>{
@@ -1303,7 +1312,9 @@ function finalizeMarquee() {
       x1:Math.min(marquee.startSP.x,marquee.curSP.x), y1:Math.min(marquee.startSP.y,marquee.curSP.y),
       x2:Math.max(marquee.startSP.x,marquee.curSP.x), y2:Math.max(marquee.startSP.y,marquee.curSP.y)
     };
-    selectMultiple(elementsInRect(rect));
+    const hits=elementsInRect(rect);
+    // Ctrl/Cmd held when the drag began → add the hits to the selection.
+    selectMultiple(marquee.additive ? [...new Set([...state.selectedIds, ...hits])] : hits);
     justMarqueed = true;
     setTimeout(()=>{ justMarqueed=false; }, 0);
   }
@@ -1420,7 +1431,29 @@ function nearestElement(sx, sy, threshCSS=13) {
     }
     if (d<bestD){bestD=d;bestId=elem.id;}
   }
+  // Shaded regions are areas, not strokes. Clicking inside one selects it
+  // unless the click is right on top of a stroke — otherwise a small region
+  // crossed by curves could never be picked, since every point in it sits
+  // within the normal threshold of something.
+  const onStroke = bestId!==null && bestD <= 6/scale;
+  if (!onStroke) {
+    for (let i=state.elements.length-1; i>=0; i--) {
+      const elem=state.elements[i];
+      if (elem.type!=='shade') continue;
+      const poly=computeShadePolygonEcon(elem);
+      if (poly && ptInPolygon(sx, sy, poly.map(p=>econToSVG(p.x,p.y)))) return elem.id;
+    }
+  }
   return bestId;
+}
+/* Standard ray-casting test. */
+function ptInPolygon(x, y, pts) {
+  let inside=false;
+  for (let i=0, j=pts.length-1; i<pts.length; j=i++) {
+    const xi=pts[i].x, yi=pts[i].y, xj=pts[j].x, yj=pts[j].y;
+    if (((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
 }
 
 /* =====================================================================
@@ -1872,6 +1905,17 @@ function selectEl(id) {
   state.selectedIds=new Set(id!=null?[id]:[]);
   render();
 }
+/* Ctrl/Cmd+click adds to (or removes from) the selection; a plain click
+   replaces it. */
+function selectElMaybeAdd(id, e) {
+  if (e && (e.ctrlKey || e.metaKey)) {
+    const s=new Set(state.selectedIds);
+    if (s.has(id)) s.delete(id); else s.add(id);
+    selectMultiple([...s]);
+  } else {
+    selectEl(id);
+  }
+}
 function selectMultiple(ids) {
   state.selectedIds=new Set(ids);
   state.selectedId=ids.length===1?ids[0]:null;
@@ -1963,14 +2007,46 @@ function showExportMenu() {
   );
 }
 
-function doExportSVG() {
+/* An exported SVG is rendered outside this page, so it reaches neither our
+   stylesheet nor the Google-hosted webfont. Both have to travel with the file:
+   the .svg-lbl rule is inlined, and Prompt is embedded as base64 @font-face.
+   The font bytes are fetched once and cached; if that fetch fails the export
+   still succeeds, just with the fallback font. */
+let _fontFaceCSS = null;
+async function embeddedFontCSS() {
+  if (_fontFaceCSS !== null) return _fontFaceCSS;
+  try {
+    const css = await (await fetch('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,400;0,500;1,400&display=swap')).text();
+    const urls = [...new Set([...css.matchAll(/url\((https:[^)]+)\)/g)].map(m=>m[1]))];
+    let out = css;
+    for (const u of urls) {
+      const buf = await (await fetch(u)).arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+      out = out.split(u).join('data:font/woff2;base64,' + btoa(bin));
+    }
+    _fontFaceCSS = out;
+  } catch (e) {
+    _fontFaceCSS = '';
+  }
+  return _fontFaceCSS;
+}
+async function serializeSVGForExport() {
+  const clone=svg.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const style=document.createElementNS('http://www.w3.org/2000/svg','style');
+  style.textContent = await embeddedFontCSS()
+    + "\n.svg-lbl{font-family:'Prompt',sans-serif}\n";
+  clone.insertBefore(style, clone.firstChild);
+  return `<?xml version="1.0" encoding="UTF-8"?>` + new XMLSerializer().serializeToString(clone);
+}
+
+async function doExportSVG() {
   const origSel=state.selectedId, origSelIds=state.selectedIds;
   clearSelection();
   render();
-  const serializer=new XMLSerializer();
-  const clone=svg.cloneNode(true);
-  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
-  const svgStr=`<?xml version="1.0" encoding="UTF-8"?>`+serializer.serializeToString(clone);
+  const svgStr=await serializeSVGForExport();
   const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
@@ -2016,7 +2092,7 @@ document.getElementById('import-file-input').addEventListener('change', e=>{
   e.target.value='';
 });
 
-function doExport(transparent) {
+async function doExport(transparent) {
   const scale=2;
   const origBg=state.bgColor;
   const origGrid=state.showGrid;
@@ -2028,12 +2104,9 @@ function doExport(transparent) {
   clearSelection();
   render();
 
-  const serializer=new XMLSerializer();
-  // Add xmlns for fonts
-  const clone=svg.cloneNode(true);
-  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
-
-  const svgStr=`<?xml version="1.0" encoding="UTF-8"?>` + serializer.serializeToString(clone);
+  // Carries the webfont and the label styling into the rasterised image, so
+  // the PNG matches what is on the canvas.
+  const svgStr=await serializeSVGForExport();
   const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
   const url=URL.createObjectURL(blob);
 
@@ -2381,7 +2454,8 @@ function renderLeftSidebar() {
         secEl.appendChild(btnTL);
       }
 
-    } else {
+    } else if (sel.type!=='shade') {
+      // A shade is a filled area — stroke thickness / dashing do not apply.
       secEl.appendChild(ctrlRow('Thickness', rangeCtrl(sel.thickness||2,0.5,8,0.5, v=>{sel.thickness=v;renderCanvas();})));
       const dottedRow=ctrlRow('Dotted');
       const cb=document.createElement('input');
@@ -2412,15 +2486,6 @@ function renderLeftSidebar() {
         })));
       }
 
-      // The endpoints stay part of the curve; this only hides their handles.
-      if (sel.lineId===undefined) {
-        const epRow=ctrlRow('Hide Endpoints');
-        const epCb=document.createElement('input');
-        epCb.type='checkbox'; epCb.checked=!!sel.hideHandles;
-        epCb.addEventListener('change',()=>{pushUndo();sel.hideHandles=epCb.checked;renderCanvas();});
-        epRow.appendChild(epCb);
-        secEl.appendChild(epRow);
-      }
 
       const btn1=document.createElement('button');
       btn1.className='side-btn'; btn1.textContent='+ Add Tangent Line';
@@ -2440,6 +2505,17 @@ function renderLeftSidebar() {
       btnTC.className='side-btn'; btnTC.innerHTML='+ Add Tangent Curve<small>curve tangent to this line, at its contact point</small>';
       btnTC.onclick=()=>handleAddTangentCurve(sel.id, tangentContactPoint(sel));
       secEl.appendChild(btnTC);
+    }
+
+    // Hides the endpoint handles on curves and tangent lines. The endpoints
+    // themselves are untouched — only their draggable circles go.
+    if ((sel.type==='curve' && sel.lineId===undefined) || sel.type==='tangent') {
+      const epRow=ctrlRow('Hide Endpoints');
+      const epCb=document.createElement('input');
+      epCb.type='checkbox'; epCb.checked=!!sel.hideHandles;
+      epCb.addEventListener('change',()=>{pushUndo();sel.hideHandles=epCb.checked;renderCanvas();});
+      epRow.appendChild(epCb);
+      secEl.appendChild(epRow);
     }
 
   } else if (state.selectedIds.size>1) {
