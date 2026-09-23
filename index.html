@@ -29,9 +29,9 @@
         --marigold: #f2a541;
         --aqua: #5ec8bd;
         --coral: #d9573c;
-        --cream:	#fffaf5;
+        --cream: #ffffff;
 
-        --desk: #dfe3e8;
+        --desk: #f5f5f5;
         --text: #39434a;
         --sidebar-w: clamp(184px, 21vw, 264px);
 
@@ -125,11 +125,11 @@
       }
       .sb-section h3 {
         font-family: "Playwrite DE Grund", cursive;
-        font-size: 0.66rem;
+        font-size: 0.8rem;
         font-weight: 400;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: var(--slate);
+        color: var(--ink);
         margin-bottom: 10px;
         -webkit-text-stroke: 0.35px currentColor;
       }
@@ -273,53 +273,75 @@
         }
       }
 
-      .tpl-btn {
-        --b: 2px;
-        --s: 0.45em;
-        --color: var(--slate);
-        --_p: var(--s);
+      /* 3D "learn-more" button, adapted from Uiverse.io by Madflows */
+      .side-btn.tpl-btn {
+        --tpl-face: #fff6ea;
+        --tpl-face-hover: #ffecd2;
+        --tpl-edge: var(--slate);
+        --tpl-base: var(--marigold);
+        --tpl-shadow: #fbe0b8;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 0 0.75em;
+        padding: 0.9em 0.5em;
         font-family: "Nunito", sans-serif;
-        font-weight: 700;
-        font-size: 0.78rem;
-        letter-spacing: 0.01em;
-        margin-top: 0;
-        padding: calc(0.55em + var(--s)) calc(0.3em + var(--s));
-        color: var(--color);
-        background: conic-gradient(from 90deg at var(--b) var(--b), #0000 90deg, var(--color) 0)
-          var(--_p) var(--_p) / calc(100% - var(--b) - 2 * var(--_p))
-          calc(100% - var(--b) - 2 * var(--_p));
-        border: 0;
-        border-radius: 0;
-
-        outline: var(--b) solid #0000;
-        outline-offset: 0.3em;
-        transition:
-          0.35s ease-out,
-          color 0s,
-          background-color 0s;
-
+        font-weight: 600;
+        font-size: 0.7rem;
+        line-height: 1.3;
+        text-transform: uppercase;
+        text-align: center;
+        color: var(--ink);
+        background: var(--tpl-face);
+        border: 2px solid var(--tpl-edge);
+        border-radius: 0.75em;
         hyphens: auto;
         overflow-wrap: break-word;
-        text-align: center;
-        line-height: 1.4;
         user-select: none;
         -webkit-user-select: none;
         touch-action: manipulation;
+        transform-style: preserve-3d;
+        transition:
+          transform 150ms cubic-bezier(0, 0, 0.58, 1),
+          background 150ms cubic-bezier(0, 0, 0.58, 1);
       }
-
-      .tpl-btn:hover,
-      .tpl-btn:focus-visible {
-        --_p: 0px;
-        outline-color: color-mix(in srgb, var(--color) 40%, transparent);
-        outline-offset: 0.05em;
-        color: var(--color);
-        background: conic-gradient(from 90deg at var(--b) var(--b), #0000 90deg, var(--color) 0)
-          var(--_p) var(--_p) / calc(100% - var(--b) - 2 * var(--_p))
-          calc(100% - var(--b) - 2 * var(--_p));
+      .side-btn.tpl-btn::before {
+        position: absolute;
+        content: "";
+        inset: 0;
+        background: var(--tpl-base);
+        border-radius: inherit;
+        box-shadow:
+          0 0 0 2px var(--tpl-edge),
+          0 0.625em 0 0 var(--tpl-shadow);
+        transform: translate3d(0, 0.75em, -1em);
+        transition:
+          transform 150ms cubic-bezier(0, 0, 0.58, 1),
+          box-shadow 150ms cubic-bezier(0, 0, 0.58, 1);
       }
-      .tpl-btn:active {
-        background: var(--color);
-        color: var(--cream);
+      .side-btn.tpl-btn:hover,
+      .side-btn.tpl-btn:focus-visible {
+        background: var(--tpl-face-hover);
+        color: var(--ink);
+        transform: translate(0, 0.25em);
+      }
+      .side-btn.tpl-btn:hover::before,
+      .side-btn.tpl-btn:focus-visible::before {
+        box-shadow:
+          0 0 0 2px var(--tpl-edge),
+          0 0.5em 0 0 var(--tpl-shadow);
+        transform: translate3d(0, 0.5em, -1em);
+      }
+      .side-btn.tpl-btn:active {
+        background: var(--tpl-face-hover);
+        transform: translate(0, 0.75em);
+      }
+      .side-btn.tpl-btn:active::before {
+        box-shadow:
+          0 0 0 2px var(--tpl-edge),
+          0 0 var(--tpl-shadow);
+        transform: translate3d(0, 0, -1em);
       }
       .hint-text {
         font-size: 0.73rem;
@@ -347,10 +369,41 @@
         gap: 4px;
       }
       .shortcut-row .key-plus {
-        font-size: 1.25rem;
-        font-weight: 700;
+        display: inline-flex;
+        width: 18px;
+        height: 18px;
         color: var(--slate);
-        line-height: 1;
+        flex-shrink: 0;
+      }
+      .key-plus svg {
+        width: 100%;
+        height: 100%;
+      }
+      .region-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      .region-swatch {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+      }
+      .region-name {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.76rem;
+        color: var(--text);
+      }
+      .region-row .side-btn {
+        width: auto;
+        margin-top: 0;
+        padding: 3px 8px;
+        font-size: 0.7rem;
+        text-align: center;
         flex-shrink: 0;
       }
       .key-icon {
@@ -368,6 +421,8 @@
         align-items: center;
         justify-content: center;
         background: var(--desk);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='625' height='625'%3E%3Cg fill='none' stroke='%2346525f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' opacity='0.18'%3E%3Cg transform='translate(46.4 71.6) rotate(36) scale(0.531) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(204.0 86.0) rotate(15) scale(0.577) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(313.1 62.7) rotate(-15) scale(0.575) translate(-32.0 -7.0)'%3E%3Crect x='0' y='0' width='64' height='14' rx='2'/%3E%3Cpath d='M4 0V3M8 0V3M12 0V3M16 0V3M20 0V5M24 0V3M28 0V3M32 0V3M36 0V3M40 0V5M44 0V3M48 0V3M52 0V3M56 0V3M60 0V5'/%3E%3C/g%3E%3Cg transform='translate(414.2 83.3) rotate(9) scale(0.512) translate(-30.0 -5.5)'%3E%3Cpath d='M7 0H44L56 5.5L44 11H7'/%3E%3Cpath d='M51.5 3.44L56 5.5L51.5 7.56Z' fill='%2346525f'/%3E%3Cpath d='M7 0V11M11 0V11'/%3E%3Cpath d='M7 0H5.5A5.5 5.5 0 0 0 5.5 11H7'/%3E%3Cpath d='M11 3.7H44M11 7.3H44'/%3E%3C/g%3E%3Cg transform='translate(576.6 49.6) rotate(-16) scale(0.567) translate(-18.0 -27.0)'%3E%3Crect x='15' y='0' width='6' height='7' rx='1.5'/%3E%3Cpath d='M11 7H25L23 13H13Z'/%3E%3Ccircle cx='18' cy='10' r='1.3' fill='%2346525f'/%3E%3Cpath d='M13.5 13H16L7 46H5.5Z'/%3E%3Cpath d='M6.25 46L5.3 53'/%3E%3Cpath d='M20 13H22.5L29 40H27Z'/%3E%3Cg transform='rotate(-14 28 42)'%3E%3Crect x='26' y='40' width='4' height='5' rx='0.8'/%3E%3Cpath d='M26.4 45H29.6L28 51Z' fill='%2346525f'/%3E%3C/g%3E%3Cpath d='M9.9 32H26'/%3E%3Ccircle cx='18' cy='32' r='1.8'/%3E%3C/g%3E%3Cg transform='translate(122.0 211.3) rotate(7) scale(0.560) translate(-32.0 -7.0)'%3E%3Crect x='0' y='0' width='64' height='14' rx='2'/%3E%3Cpath d='M4 0V3M8 0V3M12 0V3M16 0V3M20 0V5M24 0V3M28 0V3M32 0V3M36 0V3M40 0V5M44 0V3M48 0V3M52 0V3M56 0V3M60 0V5'/%3E%3C/g%3E%3Cg transform='translate(227.6 179.3) rotate(18) scale(0.567) translate(-30.0 -5.5)'%3E%3Cpath d='M7 0H44L56 5.5L44 11H7'/%3E%3Cpath d='M51.5 3.44L56 5.5L51.5 7.56Z' fill='%2346525f'/%3E%3Cpath d='M7 0V11M11 0V11'/%3E%3Cpath d='M7 0H5.5A5.5 5.5 0 0 0 5.5 11H7'/%3E%3Cpath d='M11 3.7H44M11 7.3H44'/%3E%3C/g%3E%3Cg transform='translate(382.1 208.5) rotate(-43) scale(0.520) translate(-18.0 -27.0)'%3E%3Crect x='15' y='0' width='6' height='7' rx='1.5'/%3E%3Cpath d='M11 7H25L23 13H13Z'/%3E%3Ccircle cx='18' cy='10' r='1.3' fill='%2346525f'/%3E%3Cpath d='M13.5 13H16L7 46H5.5Z'/%3E%3Cpath d='M6.25 46L5.3 53'/%3E%3Cpath d='M20 13H22.5L29 40H27Z'/%3E%3Cg transform='rotate(-14 28 42)'%3E%3Crect x='26' y='40' width='4' height='5' rx='0.8'/%3E%3Cpath d='M26.4 45H29.6L28 51Z' fill='%2346525f'/%3E%3C/g%3E%3Cpath d='M9.9 32H26'/%3E%3Ccircle cx='18' cy='32' r='1.8'/%3E%3C/g%3E%3Cg transform='translate(515.2 169.5) rotate(-43) scale(0.546) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(2.5 180.0) rotate(17) scale(0.519) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(627.5 180.0) rotate(17) scale(0.519) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(70.4 311.1) rotate(-15) scale(0.513) translate(-18.0 -27.0)'%3E%3Crect x='15' y='0' width='6' height='7' rx='1.5'/%3E%3Cpath d='M11 7H25L23 13H13Z'/%3E%3Ccircle cx='18' cy='10' r='1.3' fill='%2346525f'/%3E%3Cpath d='M13.5 13H16L7 46H5.5Z'/%3E%3Cpath d='M6.25 46L5.3 53'/%3E%3Cpath d='M20 13H22.5L29 40H27Z'/%3E%3Cg transform='rotate(-14 28 42)'%3E%3Crect x='26' y='40' width='4' height='5' rx='0.8'/%3E%3Cpath d='M26.4 45H29.6L28 51Z' fill='%2346525f'/%3E%3C/g%3E%3Cpath d='M9.9 32H26'/%3E%3Ccircle cx='18' cy='32' r='1.8'/%3E%3C/g%3E%3Cg transform='translate(173.0 320.8) rotate(39) scale(0.572) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(325.1 316.4) rotate(-36) scale(0.517) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(436.4 328.2) rotate(-20) scale(0.536) translate(-32.0 -7.0)'%3E%3Crect x='0' y='0' width='64' height='14' rx='2'/%3E%3Cpath d='M4 0V3M8 0V3M12 0V3M16 0V3M20 0V5M24 0V3M28 0V3M32 0V3M36 0V3M40 0V5M44 0V3M48 0V3M52 0V3M56 0V3M60 0V5'/%3E%3C/g%3E%3Cg transform='translate(545.5 314.2) rotate(-8) scale(0.538) translate(-30.0 -5.5)'%3E%3Cpath d='M7 0H44L56 5.5L44 11H7'/%3E%3Cpath d='M51.5 3.44L56 5.5L51.5 7.56Z' fill='%2346525f'/%3E%3Cpath d='M7 0V11M11 0V11'/%3E%3Cpath d='M7 0H5.5A5.5 5.5 0 0 0 5.5 11H7'/%3E%3Cpath d='M11 3.7H44M11 7.3H44'/%3E%3C/g%3E%3Cg transform='translate(122.7 432.0) rotate(17) scale(0.540) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(227.3 418.0) rotate(18) scale(0.506) translate(-32.0 -7.0)'%3E%3Crect x='0' y='0' width='64' height='14' rx='2'/%3E%3Cpath d='M4 0V3M8 0V3M12 0V3M16 0V3M20 0V5M24 0V3M28 0V3M32 0V3M36 0V3M40 0V5M44 0V3M48 0V3M52 0V3M56 0V3M60 0V5'/%3E%3C/g%3E%3Cg transform='translate(354.4 442.3) rotate(21) scale(0.526) translate(-30.0 -5.5)'%3E%3Cpath d='M7 0H44L56 5.5L44 11H7'/%3E%3Cpath d='M51.5 3.44L56 5.5L51.5 7.56Z' fill='%2346525f'/%3E%3Cpath d='M7 0V11M11 0V11'/%3E%3Cpath d='M7 0H5.5A5.5 5.5 0 0 0 5.5 11H7'/%3E%3Cpath d='M11 3.7H44M11 7.3H44'/%3E%3C/g%3E%3Cg transform='translate(505.2 440.2) rotate(34) scale(0.516) translate(-18.0 -27.0)'%3E%3Crect x='15' y='0' width='6' height='7' rx='1.5'/%3E%3Cpath d='M11 7H25L23 13H13Z'/%3E%3Ccircle cx='18' cy='10' r='1.3' fill='%2346525f'/%3E%3Cpath d='M13.5 13H16L7 46H5.5Z'/%3E%3Cpath d='M6.25 46L5.3 53'/%3E%3Cpath d='M20 13H22.5L29 40H27Z'/%3E%3Cg transform='rotate(-14 28 42)'%3E%3Crect x='26' y='40' width='4' height='5' rx='0.8'/%3E%3Cpath d='M26.4 45H29.6L28 51Z' fill='%2346525f'/%3E%3C/g%3E%3Cpath d='M9.9 32H26'/%3E%3Ccircle cx='18' cy='32' r='1.8'/%3E%3C/g%3E%3Cg transform='translate(8.1 443.6) rotate(-3) scale(0.537) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(633.1 443.6) rotate(-3) scale(0.537) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(67.2 553.2) rotate(-32) scale(0.521) translate(-30.0 -5.5)'%3E%3Cpath d='M7 0H44L56 5.5L44 11H7'/%3E%3Cpath d='M51.5 3.44L56 5.5L51.5 7.56Z' fill='%2346525f'/%3E%3Cpath d='M7 0V11M11 0V11'/%3E%3Cpath d='M7 0H5.5A5.5 5.5 0 0 0 5.5 11H7'/%3E%3Cpath d='M11 3.7H44M11 7.3H44'/%3E%3C/g%3E%3Cg transform='translate(207.8 546.9) rotate(9) scale(0.539) translate(-18.0 -27.0)'%3E%3Crect x='15' y='0' width='6' height='7' rx='1.5'/%3E%3Cpath d='M11 7H25L23 13H13Z'/%3E%3Ccircle cx='18' cy='10' r='1.3' fill='%2346525f'/%3E%3Cpath d='M13.5 13H16L7 46H5.5Z'/%3E%3Cpath d='M6.25 46L5.3 53'/%3E%3Cpath d='M20 13H22.5L29 40H27Z'/%3E%3Cg transform='rotate(-14 28 42)'%3E%3Crect x='26' y='40' width='4' height='5' rx='0.8'/%3E%3Cpath d='M26.4 45H29.6L28 51Z' fill='%2346525f'/%3E%3C/g%3E%3Cpath d='M9.9 32H26'/%3E%3Ccircle cx='18' cy='32' r='1.8'/%3E%3C/g%3E%3Cg transform='translate(321.3 570.9) rotate(39) scale(0.590) translate(-21.0 -21.0)'%3E%3Cpath d='M0 0V42H42Z'/%3E%3Cpath d='M7 18V35H24Z'/%3E%3Cpath d='M6 42V39M12 42V39M18 42V39M24 42V39M30 42V39M36 42V39'/%3E%3C/g%3E%3Cg transform='translate(433.0 -39.0) rotate(30) scale(0.507) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(433.0 586.0) rotate(30) scale(0.507) translate(-14.0 -24.0)'%3E%3Cpath d='M0 0V48H28Z'/%3E%3Cpath d='M6 22.2V42H17.55Z'/%3E%3Cpath d='M0 6H3M0 12H3M0 18H3M0 24H3M0 30H3M0 36H3M0 42H3'/%3E%3C/g%3E%3Cg transform='translate(555.1 562.8) rotate(40) scale(0.528) translate(-32.0 -7.0)'%3E%3Crect x='0' y='0' width='64' height='14' rx='2'/%3E%3Cpath d='M4 0V3M8 0V3M12 0V3M16 0V3M20 0V5M24 0V3M28 0V3M32 0V3M36 0V3M40 0V5M44 0V3M48 0V3M52 0V3M56 0V3M60 0V5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        background-size: 625px 625px;
         padding: 12px 10px 8px;
         gap: 8px;
         overflow: hidden;
@@ -389,6 +444,8 @@
       #main-svg {
         display: block;
         cursor: default;
+        user-select: none;
+        -webkit-user-select: none;
         max-width: 100%;
         max-height: calc(100vh - 132px);
         width: auto;
@@ -844,15 +901,17 @@
 
       const GH = SVG_H - PT - PB;
 
+      const DEFAULT_SCALE = 20;
+
       let state = {
         elements: [],
         selectedId: null,
         selectedIds: new Set(),
         mode: "select",
         lineFirstId: null,
-        xScale: 10,
-        yScale: 10,
-        scaleLock: null,
+        xScale: DEFAULT_SCALE,
+        yScale: DEFAULT_SCALE,
+        scaleLock: 1,
         gridColor: "#e0e0e0",
         bgColor: "#ffffff",
         xLabel: "X",
@@ -898,8 +957,41 @@
         "nextId",
       ];
 
+      // Scale only sets how many grid units span each axis. Element coordinates are
+      // stretched with it so the drawing stays where it is on the canvas.
+      function rescaleElements(kx, ky) {
+        if (kx === 1 && ky === 1) return;
+        const ks = Math.sqrt(kx * ky);
+        state.elements.forEach((e) => {
+          if (e.ex !== undefined) e.ex *= kx;
+          if (e.ey !== undefined) e.ey *= ky;
+          if (e.x1 !== undefined) e.x1 *= kx;
+          if (e.y1 !== undefined) e.y1 *= ky;
+          if (e.x2 !== undefined) e.x2 *= kx;
+          if (e.y2 !== undefined) e.y2 *= ky;
+          if (e.cpx !== undefined) e.cpx *= kx;
+          if (e.cpy !== undefined) e.cpy *= ky;
+          if (e.span !== undefined) e.span *= ks;
+        });
+      }
+
+      function setScaleKeepingDrawing(xs, ys) {
+        const kx = xs / state.xScale,
+          ky = ys / state.yScale;
+        state.xScale = xs;
+        state.yScale = ys;
+        rescaleElements(kx, ky);
+      }
+
       function setScale(axis, v) {
         if (!(v > 0)) return;
+        const oldX = state.xScale,
+          oldY = state.yScale;
+        applyScale(axis, v);
+        rescaleElements(state.xScale / oldX, state.yScale / oldY);
+      }
+
+      function applyScale(axis, v) {
         if (axis === "x") state.xScale = v;
         else state.yScale = v;
         if (state.scaleLock) {
@@ -1336,6 +1428,10 @@
       }
 
       function computeShadePolygonEcon(shade) {
+        if (shade.region) {
+          const r = computeRegion(shade.region);
+          return r.poly || null;
+        }
         const A = resolveBound(shade.boundA),
           B = resolveBound(shade.boundB);
         if (!A || !B) return null;
@@ -1407,6 +1503,226 @@
         render();
       }
 
+      // Auto regions: shades whose outline is derived from curves identified by their Name
+      // (falling back to Label), recomputed on every render so they follow edits.
+      const REGION_TYPES = {
+        cs: { name: "Consumer surplus", label: "CS", color: "#3b82f6" },
+        ps: { name: "Producer surplus", label: "PS", color: "#22a35a" },
+        dwl: { name: "Deadweight loss", label: "DWL", color: "#f0a202" },
+        tax: { name: "Tax revenue", label: "Tax revenue", color: "#8b5cf6" },
+        profit: { name: "Profit", label: "Profit", color: "#e8575a" },
+      };
+
+      const ROLE_NAMES = ["Demand", "Supply", "Supply + tax", "MR", "MC", "AC", "Price"];
+
+      const ROLE_ALIASES = {
+        demand: ["demand", "d", "ar", "d=ar", "ar=d", "averagerevenue"],
+        supply: ["supply", "s"],
+        tax: ["supply+tax", "s+tax", "s+t", "tax", "taxedsupply", "supplywithtax", "s(tax)"],
+        mr: ["mr", "marginalrevenue"],
+        mc: ["mc", "marginalcost"],
+        ac: ["ac", "atc", "averagecost", "averagetotalcost"],
+        price: ["price", "p", "p=mr", "p=mr=ar", "p=ar=mr", "pricefloor", "priceceiling"],
+      };
+
+      function roleKey(s) {
+        return (s || "")
+          .toLowerCase()
+          .replace(/[\s₀-₉]/g, "")
+          .replace(/\d+$/, "");
+      }
+
+      function findRole(role) {
+        const aliases = ROLE_ALIASES[role];
+        const cands = state.elements.filter((e) => e.type === "line" || e.type === "curve");
+        return (
+          cands.find((e) => aliases.includes(roleKey(e.name))) ||
+          cands.find((e) => !e.name && aliases.includes(roleKey(e.label))) ||
+          null
+        );
+      }
+
+      function priceLevel(e) {
+        if (e.type === "curve") return (e.y1 + e.y2) / 2;
+        const r = elemYRangeEcon(e);
+        return r ? (r[0] + r[1]) / 2 : null;
+      }
+
+      // x where A and B cross, preferring the crossing where A falls below B
+      // (demand/MR/price cutting supply/MC from above).
+      function crossX(A, B) {
+        const rA = elemXRangeEcon(A),
+          rB = elemXRangeEcon(B);
+        if (!rA || !rB) return null;
+        const lo = Math.max(rA[0], rB[0]),
+          hi = Math.min(rA[1], rB[1]);
+        if (!(hi > lo)) return null;
+        const diff = (x) => {
+          const a = yAtX(A, x),
+            b = yAtX(B, x);
+          return a == null || b == null ? null : a - b;
+        };
+        const N = 400;
+        let prevX = null,
+          prevD = null,
+          any = null;
+        for (let i = 0; i <= N; i++) {
+          const x = lo + ((hi - lo) * i) / N,
+            d = diff(x);
+          if (d == null) {
+            prevD = null;
+            continue;
+          }
+          if (prevD != null && Math.sign(prevD) !== Math.sign(d)) {
+            let a = prevX,
+              b = x,
+              da = prevD;
+            for (let k = 0; k < 40; k++) {
+              const m = (a + b) / 2,
+                dm = diff(m);
+              if (dm == null) break;
+              if (Math.sign(dm) === Math.sign(da)) {
+                a = m;
+                da = dm;
+              } else b = m;
+            }
+            const root = (a + b) / 2;
+            if (prevD > 0) return root;
+            if (any == null) any = root;
+          }
+          prevX = x;
+          prevD = d;
+        }
+        return any;
+      }
+
+      function analyzeMarket() {
+        const D = findRole("demand"),
+          S = findRole("supply"),
+          T = findRole("tax"),
+          MR = findRole("mr"),
+          MC = findRole("mc"),
+          AC = findRole("ac"),
+          P = findRole("price");
+        if (MC && (MR || P)) {
+          const Q = MR ? crossX(MR, MC) : crossX(P, MC);
+          if (Q == null) return { error: `${MR ? "MR" : "Price"} and MC don't intersect.` };
+          const price = D ? yAtX(D, Q) : priceLevel(P);
+          if (price == null)
+            return { error: "Demand isn't defined at the profit-maximising quantity." };
+          return { kind: "firm", Q, price, Pp: price, sup: MC, D, AC, Qo: D ? crossX(D, MC) : null };
+        }
+        if (D && S) {
+          const Qe = crossX(D, S);
+          if (Qe == null) return { error: "Demand and Supply don't intersect." };
+          if (T) {
+            const Qt = crossX(D, T);
+            if (Qt == null) return { error: "Demand and Supply + tax don't intersect." };
+            const Pc = yAtX(D, Qt),
+              Pp = yAtX(S, Qt);
+            if (Pp == null) return { error: "Supply isn't defined at the taxed quantity." };
+            return { kind: "tax", Q: Qt, price: Pc, Pp, sup: S, D, Qo: Qe };
+          }
+          if (P) {
+            const pl = priceLevel(P),
+              qd = xAtY(D, pl),
+              qs = xAtY(S, pl);
+            if (qd == null || qs == null)
+              return { error: "The Price line must cross both Demand and Supply." };
+            return { kind: "control", Q: Math.min(qd, qs), price: pl, Pp: pl, sup: S, D, Qo: Qe };
+          }
+          return { kind: "market", Q: Qe, price: yAtX(D, Qe), Pp: yAtX(D, Qe), sup: S, D, Qo: Qe };
+        }
+        return {
+          error:
+            "Couldn't find the curves this region needs. Select each line or curve and set its Name (Element Properties) to Demand and Supply, or MR, MC and AC.",
+        };
+      }
+
+      function computeRegion(type) {
+        const m = analyzeMarket();
+        if (m.error) return m;
+        const band = (top, bot, x0, x1, clamp = true) => {
+          const N = 60,
+            T = [],
+            B = [];
+          for (let i = 0; i <= N; i++) {
+            const x = x0 + ((x1 - x0) * i) / N;
+            const yt = top(x);
+            let yb = bot(x);
+            if (yt == null || yb == null) continue;
+            if (clamp && yb > yt) yb = yt;
+            T.push({ x, y: yt });
+            B.push({ x, y: yb });
+          }
+          return T.length < 2 ? null : T.concat(B.reverse());
+        };
+        const rect = (x0, x1, y0, y1) => [
+          { x: x0, y: y0 },
+          { x: x1, y: y0 },
+          { x: x1, y: y1 },
+          { x: x0, y: y1 },
+        ];
+        // Start where demand starts so bands and rectangles share a left edge.
+        const x0 = m.D ? Math.max(0, elemXRangeEcon(m.D)[0]) : 0;
+        let poly = null;
+        if (type === "cs") {
+          if (!m.D) return { error: "Consumer surplus needs a curve named Demand." };
+          poly = band((x) => yAtX(m.D, x), () => m.price, x0, m.Q);
+        } else if (type === "ps") {
+          poly = band(() => m.Pp, (x) => yAtX(m.sup, x), x0, m.Q);
+        } else if (type === "dwl") {
+          if (m.kind === "market")
+            return {
+              error:
+                "There's no deadweight loss at the free-market equilibrium. Add a line named Supply + tax or Price, or use MR and MC.",
+            };
+          if (!m.D || m.Qo == null)
+            return {
+              error: `Deadweight loss needs Demand to cross ${m.kind === "firm" ? "MC" : "Supply"}.`,
+            };
+          const lo = Math.min(m.Q, m.Qo),
+            hi = Math.max(m.Q, m.Qo);
+          if (hi - lo < 1e-6) return { error: "No deadweight loss: output is already efficient." };
+          poly = band((x) => yAtX(m.D, x), (x) => yAtX(m.sup, x), lo, hi, false);
+        } else if (type === "tax") {
+          if (m.kind !== "tax")
+            return {
+              error: "Tax revenue needs curves named Demand, Supply and Supply + tax.",
+            };
+          poly = rect(x0, m.Q, m.Pp, m.price);
+        } else if (type === "profit") {
+          if (m.kind !== "firm" || !m.AC)
+            return { error: "Profit needs curves named MC, AC and either MR (with Demand) or Price." };
+          const ac = yAtX(m.AC, m.Q);
+          if (ac == null) return { error: "AC isn't defined at the profit-maximising quantity." };
+          poly = rect(x0, m.Q, ac, m.price);
+        }
+        return poly ? { poly } : { error: "This region is empty for the current graph." };
+      }
+
+      function addRegion(type, hatch) {
+        const info = REGION_TYPES[type];
+        const r = computeRegion(type);
+        if (!r.poly) {
+          showPopup(info.name, r.error, [{ label: "OK", cls: "primary", fn: closePopup }]);
+          return;
+        }
+        pushUndo();
+        const id = uid();
+        state.elements.push({
+          id: id,
+          type: "shade",
+          region: type,
+          color: info.color,
+          opacity: hatch ? 0.4 : 0.3,
+          hatch: !!hatch,
+          label: info.label,
+        });
+        setMode("select");
+        selectEl(id);
+      }
+
       function drawShade(elem) {
         const poly = computeShadePolygonEcon(elem);
         if (!poly) return;
@@ -1417,15 +1733,52 @@
           "data-id": elem.id,
           cursor: "pointer",
         });
-        g.appendChild(
-          el("path", {
-            d: d,
-            fill: elem.color || "#00aedb",
-            "fill-opacity": elem.opacity !== undefined ? elem.opacity : 0.3,
-            stroke: "none",
-            "pointer-events": "all",
-          }),
-        );
+        const col = elem.color || "#00aedb";
+        const op = elem.opacity !== undefined ? elem.opacity : 0.3;
+        if (elem.hatch) {
+          const pid = `hatch-${elem.id}`;
+          const defs = el("defs");
+          const pat = el("pattern", {
+            id: pid,
+            patternUnits: "userSpaceOnUse",
+            width: 8,
+            height: 8,
+            patternTransform: "rotate(45)",
+          });
+          pat.appendChild(
+            el("line", {
+              x1: 0,
+              y1: 0,
+              x2: 0,
+              y2: 8,
+              stroke: col,
+              "stroke-width": 1.6,
+              "stroke-opacity": Math.min(1, op * 2.5),
+            }),
+          );
+          defs.appendChild(pat);
+          g.appendChild(defs);
+          g.appendChild(
+            el("path", {
+              d: d,
+              fill: `url(#${pid})`,
+              stroke: col,
+              "stroke-opacity": Math.min(1, op * 2.5),
+              "stroke-width": 1,
+              "pointer-events": "all",
+            }),
+          );
+        } else {
+          g.appendChild(
+            el("path", {
+              d: d,
+              fill: col,
+              "fill-opacity": op,
+              stroke: "none",
+              "pointer-events": "all",
+            }),
+          );
+        }
         if (sel) {
           g.appendChild(
             el("path", {
@@ -1722,6 +2075,7 @@
           if (elem.type === "curve" && elem.lineId !== undefined) resolveTangentCurveGeometry(elem);
         });
         state.elements.filter((e) => e.type === "shade").forEach(drawShade);
+        state.elements.filter((e) => e.type === "point" && e.guides).forEach(drawPointGuides);
         const order = ["curve", "line", "tangent", "point", "text"];
         const sorted = [...state.elements]
           .filter((e) => e.type !== "shade")
@@ -1800,6 +2154,20 @@
           );
         }
         refreshEquationBox();
+      }
+
+      function drawPointGuides(elem) {
+        const p = econToSVG(elem.ex, elem.ey);
+        const o = econToSVG(0, 0);
+        const g = el("g", {
+          stroke: elem.guideColor || "#8a8a8a",
+          "stroke-width": 1.2,
+          "stroke-dasharray": "5 4",
+          "pointer-events": "none",
+        });
+        if (elem.ey > 1e-9) g.appendChild(el("line", { x1: p.x, y1: p.y, x2: p.x, y2: o.y }));
+        if (elem.ex > 1e-9) g.appendChild(el("line", { x1: p.x, y1: p.y, x2: o.x, y2: p.y }));
+        svg.appendChild(g);
       }
 
       function labelAttrs(elem, x, y) {
@@ -2521,7 +2889,12 @@
 
       svg.addEventListener("mousedown", (e) => {
         if (e.button !== 0) return;
-        if (state.mode !== "select") return;
+        // Shift/Ctrl+Shift clicks while drawing would otherwise extend the page's text
+        // selection across the axis labels.
+        if (state.mode !== "select") {
+          e.preventDefault();
+          return;
+        }
         const sp = getSVGPt(e);
         const near = nearestElement(sp.x, sp.y);
         const additive = e.ctrlKey || e.metaKey;
@@ -3008,8 +3381,15 @@
         let ep = svgToEcon(placeSVG.x, placeSVG.y);
         ep = clampEcon(ep.x, ep.y);
         if (state.mode === "point") {
-          const near = nearestElement(sp.x, sp.y, 9);
-          if (!near) addPoint(ep.x, ep.y);
+          // Only an existing point blocks placement; lines and curves are valid snap targets.
+          const r = svg.getBoundingClientRect();
+          const thresh = 9 / (r.width ? r.width / SVG_W : 1);
+          const onPoint = state.elements.some((p) => {
+            if (p.type !== "point") return false;
+            const ps = econToSVG(p.ex, p.ey);
+            return Math.hypot(ps.x - sp.x, ps.y - sp.y) < thresh;
+          });
+          if (!onPoint) addPoint(ep.x, ep.y);
         } else if (state.mode === "text") {
           addText(ep.x, ep.y);
           setMode("select");
@@ -3346,9 +3726,18 @@
         return svgToEcon(pos.x, pos.y);
       }
 
-      function computeTangentCurvePoints(Q, dir, perp, sign, initialL) {
+      // Normal to the line, always pointing up (or right for a vertical line) so that
+      // "convex" means the same thing whichever end the line was drawn from.
+      function tangentPerp(dir) {
+        const flip = dir.x < -1e-9 || (Math.abs(dir.x) <= 1e-9 && dir.y > 0);
+        return flip ? { x: dir.y, y: -dir.x } : { x: -dir.y, y: dir.x };
+      }
+
+      // The curve's midpoint (t = 0.5) is always Q with tangent parallel to dir, so any
+      // bend keeps it tangent to the line; bend only sets how far the arms pull away.
+      function computeTangentCurvePoints(Q, dir, perp, sign, initialL, bend = 1) {
         function pointsFor(l) {
-          const d = l * 0.35;
+          const d = l * 0.35 * bend;
           const M = {
             x: Q.x - sign * d * perp.x,
             y: Q.y - sign * d * perp.y,
@@ -3402,16 +3791,13 @@
           x: dx / len,
           y: dy / len,
         };
-        const perp = {
-          x: -dir.y,
-          y: dir.x,
-        };
+        const perp = tangentPerp(dir);
         if (!Q)
           Q = {
             x: (a.x + b.x) / 2,
             y: (a.y + b.y) / 2,
           };
-        const sign = shape === "convex" ? 1 : -1;
+        const sign = shape === "convex" ? -1 : 1;
         const initialL = Math.min(len * 0.6, Math.max(state.xScale, state.yScale) * 0.5) || 1;
         const {
           P0: P0,
@@ -3462,14 +3848,19 @@
           x: dx / len,
           y: dy / len,
         };
-        const perp = {
-          x: -dir.y,
-          y: dir.x,
-        };
-        const sign = elem.shape === "convex" ? 1 : -1;
+        const perp = tangentPerp(dir);
+        const sign = elem.shape === "convex" ? -1 : 1;
         const initialL =
           elem.span || Math.min(len * 0.6, Math.max(state.xScale, state.yScale) * 0.5) || 1;
-        const { P0: P0, P2: P2, Pc: Pc } = computeTangentCurvePoints(Q, dir, perp, sign, initialL);
+        const bend = elem.bend !== undefined ? elem.bend : 1;
+        const { P0: P0, P2: P2, Pc: Pc } = computeTangentCurvePoints(
+          Q,
+          dir,
+          perp,
+          sign,
+          initialL,
+          bend,
+        );
         elem.x1 = P0.x;
         elem.y1 = P0.y;
         elem.x2 = P2.x;
@@ -3566,6 +3957,7 @@
               return state.elements.find((x) => x.id === e.lineId);
             }
             if (e.type === "shade") {
+              if (e.region) return true;
               const okA =
                 e.boundA === "xaxis" ||
                 e.boundA === "yaxis" ||
@@ -4396,6 +4788,26 @@
                 }),
               ),
             );
+            const hatchRow = ctrlRow("Hatched");
+            const hatchCb = document.createElement("input");
+            hatchCb.type = "checkbox";
+            hatchCb.checked = !!sel.hatch;
+            hatchCb.addEventListener("change", () => {
+              pushUndo();
+              sel.hatch = hatchCb.checked;
+              renderCanvas();
+            });
+            hatchRow.appendChild(hatchCb);
+            secEl.appendChild(hatchRow);
+          }
+          if (sel.type !== "shade" && sel.type !== "text") {
+            const nameIn = inputTxt(sel.name || "", (v) => {
+              sel.name = v;
+            });
+            nameIn.setAttribute("list", "role-names");
+            nameIn.placeholder = "e.g. Demand, MC";
+            nameIn.title = "Used by Auto Regions to find curves (Demand, Supply, MR, MC, AC, Price, Supply + tax)";
+            secEl.appendChild(ctrlRow("Name", nameIn));
           }
           if (isStroked) {
             secEl.appendChild(
@@ -4418,6 +4830,28 @@
                 }),
               ),
             );
+            const guideRow = ctrlRow("Show Guides");
+            const guideCb = document.createElement("input");
+            guideCb.type = "checkbox";
+            guideCb.checked = !!sel.guides;
+            guideCb.addEventListener("change", () => {
+              pushUndo();
+              sel.guides = guideCb.checked;
+              render();
+            });
+            guideRow.appendChild(guideCb);
+            secEl.appendChild(guideRow);
+            if (sel.guides) {
+              secEl.appendChild(
+                ctrlRow(
+                  "Guide Color",
+                  inputColor(sel.guideColor || "#8a8a8a", (v) => {
+                    sel.guideColor = v;
+                    renderCanvas();
+                  }),
+                ),
+              );
+            }
           } else if (sel.type === "text") {
             secEl.appendChild(
               ctrlRow(
@@ -4449,6 +4883,15 @@
                 "Position",
                 rangeCtrl(sel.t, 0, 1, 0.01, (v) => {
                   sel.t = v;
+                  renderCanvas();
+                }),
+              ),
+            );
+            secEl.appendChild(
+              ctrlRow(
+                "Curvature",
+                rangeCtrl(sel.bend !== undefined ? sel.bend : 1, 0.1, 2.5, 0.05, (v) => {
+                  sel.bend = v;
                   renderCanvas();
                 }),
               ),
@@ -4947,17 +5390,62 @@
           btn.textContent = t.name;
           btn.onclick = () => {
             t.fn();
+            setScaleKeepingDrawing(DEFAULT_SCALE, DEFAULT_SCALE);
+            state.scaleLock = 1;
             render();
           };
           tplGrid.appendChild(btn);
         });
         tplSec.appendChild(tplGrid);
         sb.appendChild(tplSec);
+        const roleList = document.createElement("datalist");
+        roleList.id = "role-names";
+        ROLE_NAMES.forEach((n) => {
+          const o = document.createElement("option");
+          o.value = n;
+          roleList.appendChild(o);
+        });
+        document.body.appendChild(roleList);
+        const regSec = sec("Auto Regions");
+        const regHint = document.createElement("p");
+        regHint.className = "hint-text";
+        regHint.style.lineHeight = "1.5";
+        regHint.style.marginBottom = "8px";
+        regHint.textContent =
+          "Name your curves (Demand, Supply, Supply + tax, MR, MC, AC, Price), then add a region.";
+        regSec.appendChild(regHint);
+        Object.entries(REGION_TYPES).forEach(([key, info]) => {
+          const row = document.createElement("div");
+          row.className = "region-row";
+          const sw = document.createElement("span");
+          sw.className = "region-swatch";
+          sw.style.background = info.color + "66";
+          const nm = document.createElement("span");
+          nm.className = "region-name";
+          nm.textContent = info.name;
+          row.appendChild(sw);
+          row.appendChild(nm);
+          [
+            ["Fill", false],
+            ["Hatch", true],
+          ].forEach(([text, hatch]) => {
+            const b = document.createElement("button");
+            b.className = "side-btn";
+            b.textContent = text;
+            b.title = `Add ${info.name.toLowerCase()}${hatch ? " (hatched)" : ""}`;
+            b.onclick = () => addRegion(key, hatch);
+            row.appendChild(b);
+          });
+          regSec.appendChild(row);
+        });
+        sb.appendChild(regSec);
         const helpSec = sec("Keyboard Shortcuts");
         const kIcon = (src, alt, cls) =>
           `<img class="key-icon${cls ? " " + cls : ""}" src="${src}" alt="${alt}">`;
+        const KEY_PLUS =
+          '<span class="key-plus" aria-label="plus"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 2.5v13M2.5 9h13"/></svg></span>';
         const shortcutRow = (imgs, text) =>
-          `<p class="shortcut-row"><span class="key-icon-group">${imgs.join('<span class="key-plus">+</span>')}</span><span>${text}</span></p>`;
+          `<p class="shortcut-row"><span class="key-icon-group">${imgs.join(KEY_PLUS)}</span><span>${text}</span></p>`;
         const SHIFT_ICON =
           "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20144%2064%22%20width%3D%22144%22%20height%3D%2264%22%20font-family%3D%22-apple-system%2C%20%27SF%20Pro%20Text%27%2C%20%27Helvetica%20Neue%27%2C%20Helvetica%2C%20Arial%2C%20sans-serif%22%20xmlns%3Ac2pa%3D%22http%3A%2F%2Fc2pa.org%2Fmanifest%22%3E%20%3Cdefs%3E%20%3ClinearGradient%20id%3D%22cap%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%20%3Cstop%20offset%3D%220%22%20stop-color%3D%22%233a3a3c%22%2F%3E%20%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231c1c1e%22%2F%3E%20%3C%2FlinearGradient%3E%20%3C%2Fdefs%3E%20%3Crect%20x%3D%220.5%22%20y%3D%220.5%22%20width%3D%22143%22%20height%3D%2263%22%20rx%3D%2212%22%20fill%3D%22url%28%23cap%29%22%20stroke%3D%22%230b0b0c%22%2F%3E%20%3Crect%20x%3D%221.5%22%20y%3D%221.5%22%20width%3D%22141%22%20height%3D%2261%22%20rx%3D%2211%22%20fill%3D%22none%22%20stroke%3D%22%235a5a5e%22%20stroke-opacity%3D%220.6%22%2F%3E%20%3Cpath%20d%3D%22M19%2012%20L27%2021%20H23%20V28%20H15%20V21%20H11%20Z%22%20fill%3D%22none%22%20stroke%3D%22%23f2f2f2%22%20stroke-width%3D%221.8%22%20stroke-linejoin%3D%22round%22%2F%3E%20%3Ctext%20x%3D%2212%22%20y%3D%2250%22%20font-size%3D%2215%22%20font-weight%3D%22500%22%20fill%3D%22%23f2f2f2%22%3EShift%3C%2Ftext%3E%20%3C%2Fsvg%3E";
         const CTRL_ICON =
@@ -5040,6 +5528,7 @@
           color: "#1a1a1a",
           thickness: 2.5,
           dotted: false,
+          name: "Demand",
           label: "D₀",
           lox: -90,
           loy: -32,
@@ -5072,6 +5561,7 @@
           color: "#1a1a1a",
           thickness: 2.5,
           dotted: false,
+          name: "Supply",
           label: "S₀",
           lox: 97,
           loy: -57,
@@ -5415,7 +5905,9 @@
 
       function tplBudget() {
         clearCanvas();
-        state.showGrid = false;
+        state.showGrid = true;
+        state.gridColor = "#e0e0e0";
+        state.bgColor = "#ffffff";
         state.xScale = 16;
         state.yScale = 16;
         state.xTicks = {
@@ -5432,204 +5924,62 @@
         };
         state.xLabel = "Oranges (x)";
         state.yLabel = "Apples (y)";
-        const icCurve = (a, k, Mx, My, mag) => {
-          const t = (mag * (Mx - a)) / (My - k + mag * (Mx - a));
-          return {
-            x1: a,
-            y1: k + (My - k) / ((1 - t) * (1 - t)),
-            x2: a + (Mx - a) / (t * t),
-            y2: k,
-            cpx: a,
-            cpy: k,
-            tanT: t,
-          };
+        // Built the way a user would: draw each budget line, drop a point on it, then
+        // "+ Add Tangent Curve" at that point so the IC stays tangent as things move.
+        const budgetLine = (xIntercept, color, label, lox, loy) => {
+          const a = uid(),
+            b = uid(),
+            id = uid();
+          push({ id: a, type: "point", ex: 0, ey: 15, color: "#222", size: 5, label: "" });
+          push({ id: b, type: "point", ex: xIntercept, ey: 0, color: "#222", size: 5, label: "" });
+          push({
+            id: id,
+            type: "line",
+            p1Id: a,
+            p2Id: b,
+            color: color,
+            thickness: 2,
+            dotted: false,
+            label: label,
+            hideHandles: true,
+            lox: lox,
+            loy: loy,
+          });
+          return id;
         };
-        const b1 = uid(),
-          b2 = uid(),
-          steepLine = uid();
-        push({
-          id: b1,
-          type: "point",
-          ex: 0,
-          ey: 15,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: b2,
-          type: "point",
-          ex: 5,
-          ey: 0,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: steepLine,
-          type: "line",
-          p1Id: b1,
-          p2Id: b2,
-          color: "#a63a2b",
-          thickness: 2.5,
-          dotted: false,
-          label: "",
-        });
-        const b3 = uid(),
-          b4 = uid(),
-          shallowLine = uid();
-        push({
-          id: b3,
-          type: "point",
-          ex: 0,
-          ey: 15,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: b4,
-          type: "point",
-          ex: 15,
-          ey: 0,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: shallowLine,
-          type: "line",
-          p1Id: b3,
-          p2Id: b4,
-          color: "#a63a2b",
-          thickness: 2.5,
-          dotted: false,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "curve",
-          hideHandles: true,
-          ...icCurve(2.2, 1.5, 3, 6, 3),
-          curvature: 0.5,
-          slideLineId: steepLine,
-          color: "#1a1a1a",
-          thickness: 2,
-          dotted: false,
-          label: "",
-        });
-        const t1x = uid(),
-          t1y = uid();
-        push({
-          id: t1x,
-          type: "point",
-          ex: 3,
-          ey: 0,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: t1y,
-          type: "point",
-          ex: 0,
-          ey: 6,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        const t1 = uid();
-        push({
-          id: t1,
-          type: "point",
-          ex: 3,
-          ey: 6,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "line",
-          p1Id: t1x,
-          p2Id: t1,
-          color: "#8a8a8a",
-          thickness: 1,
-          dotted: true,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "line",
-          p1Id: t1y,
-          p2Id: t1,
-          color: "#8a8a8a",
-          thickness: 1,
-          dotted: true,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "curve",
-          hideHandles: true,
-          ...icCurve(4.5, 5.2, 7, 8, 1),
-          curvature: 0.5,
-          slideLineId: shallowLine,
-          color: "#1a1a1a",
-          thickness: 2,
-          dotted: false,
-          label: "",
-        });
-        const t2x = uid(),
-          t2y = uid();
-        push({
-          id: t2x,
-          type: "point",
-          ex: 7,
-          ey: 0,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: t2y,
-          type: "point",
-          ex: 0,
-          ey: 8,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        const t2 = uid();
-        push({
-          id: t2,
-          type: "point",
-          ex: 7,
-          ey: 8,
-          color: "transparent",
-          size: 0,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "line",
-          p1Id: t2x,
-          p2Id: t2,
-          color: "#8a8a8a",
-          thickness: 1,
-          dotted: true,
-          label: "",
-        });
-        push({
-          id: uid(),
-          type: "line",
-          p1Id: t2y,
-          p2Id: t2,
-          color: "#8a8a8a",
-          thickness: 1,
-          dotted: true,
-          label: "",
-        });
+        const tangentIC = (lineId, xIntercept, x, color, label) => {
+          const pt = uid(),
+            id = uid();
+          push({
+            id: pt,
+            type: "point",
+            ex: x,
+            ey: 15 - (15 / xIntercept) * x,
+            color: "#4400ff",
+            size: 5,
+            label: "",
+            guides: true,
+            guideColor: "#daa410",
+          });
+          const curve = {
+            id: id,
+            type: "curve",
+            shape: "convex",
+            lineId: lineId,
+            t: x / xIntercept,
+            pointId: pt,
+            color: color,
+            thickness: 2,
+            dotted: false,
+            label: label,
+          };
+          push(curve);
+          resolveTangentCurveGeometry(curve);
+        };
+        const steep = budgetLine(5, "#29ae4a", "BL₁", -30, -4);
+        const shallow = budgetLine(15, "#ac4c0c", "BL₂", 60, 42);
+        tangentIC(steep, 5, 3, "#7800bd", "U₁");
+        tangentIC(shallow, 15, 7, "#d41243", "U₂");
       }
 
       function tplPerfectComp() {
@@ -5670,6 +6020,7 @@
           color: "#a63a2b",
           thickness: 2,
           dotted: false,
+          name: "AC",
           label: "AC",
           lox: 15,
           loy: 26,
@@ -5688,6 +6039,7 @@
           color: "#1f3a5f",
           thickness: 2,
           dotted: false,
+          name: "MC",
           label: "MC",
           lox: -23,
           loy: -39,
@@ -5718,6 +6070,7 @@
           color: "#4a7c59",
           thickness: 3,
           dotted: false,
+          name: "Price",
           label: "P = MR = AR",
           lox: 32,
           loy: 55,
@@ -5762,7 +6115,7 @@
         state.showGrid = true;
         state.xScale = 10;
         state.yScale = 10;
-        state.scaleLock = null;
+        state.scaleLock = 1;
         state.gridColor = "#e0e0e0";
         state.bgColor = "#ffffff";
         state.xTicks = {
@@ -5805,6 +6158,7 @@
           color: "#29ae4a",
           thickness: 2,
           dotted: false,
+          name: "Demand",
           label: "Demand",
           hideHandles: true,
           lox: -160,
@@ -5836,6 +6190,7 @@
           color: "#ac4c0c",
           thickness: 2,
           dotted: false,
+          name: "MR",
           label: "Marginal Revenue",
           hideHandles: true,
           lox: 95,
@@ -5853,6 +6208,7 @@
           color: "#7800bd",
           thickness: 2,
           dotted: false,
+          name: "MC",
           label: "Marginal cost",
           scale: 0.75,
           hideHandles: true,
@@ -5871,6 +6227,7 @@
           color: "#d41243",
           thickness: 2,
           dotted: false,
+          name: "AC",
           label: "Average Cost",
           hideHandles: true,
           scale: 1.1,
