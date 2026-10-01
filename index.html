@@ -33,7 +33,7 @@
 
         --desk: #f5f5f5;
         --text: #39434a;
-        --sidebar-w: clamp(184px, 21vw, 264px);
+        --sidebar-w: clamp(196px, 22.5vw, 288px);
 
         --sidebar-w-left: clamp(232px, 23vw, 300px);
       }
@@ -178,6 +178,16 @@
         font-size: 0.78rem;
         font-family: inherit;
       }
+      .ctrl-select {
+        flex: 1;
+        min-width: 0;
+        padding: 3px 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        font-family: inherit;
+        background: #fff;
+      }
       .ctrl-row input[type="checkbox"] {
         accent-color: var(--slate);
         cursor: pointer;
@@ -271,6 +281,36 @@
         .tpl-grid {
           grid-template-columns: minmax(0, 1fr);
         }
+      }
+
+      .tpl-tabs {
+        display: flex;
+        gap: 2px;
+        margin-top: 8px;
+        padding: 2px;
+        border: 1.5px solid var(--slate);
+        border-radius: 8px;
+        background: #fff6ea;
+      }
+      .tpl-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 5px 2px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink);
+        font-family: "Nunito", sans-serif;
+        font-size: 0.66rem;
+        font-weight: 700;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+      .tpl-tab:hover {
+        background: #ffecd2;
+      }
+      .tpl-tab[aria-selected="true"] {
+        background: var(--marigold);
       }
 
       /* 3D "learn-more" button, adapted from Uiverse.io by Madflows */
@@ -370,8 +410,9 @@
       }
       .shortcut-row .key-plus {
         display: inline-flex;
-        width: 18px;
-        height: 18px;
+        width: 11px;
+        height: 11px;
+        margin: 0 1px;
         color: var(--slate);
         flex-shrink: 0;
       }
@@ -600,6 +641,40 @@
         background: #eee;
         border-color: #aaa;
         color: #555;
+      }
+      .pop-field {
+        width: 100%;
+        padding: 8px 10px;
+        border: 2px solid #ccc;
+        border-radius: 6px;
+        font-family: "Prompt", sans-serif;
+        font-size: 0.82rem;
+        background: #fff;
+      }
+      .pop-field:focus {
+        outline: none;
+        border-color: var(--slate);
+      }
+      #popup-box p.pop-hint {
+        font-size: 0.74rem;
+        color: #777;
+        margin: 8px 0 4px;
+      }
+      #popup-box p.pop-status {
+        font-size: 0.78rem;
+        color: var(--slate);
+        min-height: 1.2em;
+        margin: 4px 0 14px;
+      }
+      #popup-box p.pop-status.err {
+        color: #c0392b;
+      }
+      .pop-list {
+        font-size: 0.76rem;
+        color: #555;
+        margin: -8px 0 16px 18px;
+        line-height: 1.5;
+        word-break: break-word;
       }
       .pop-btn-icon {
         width: 56px;
@@ -871,8 +946,23 @@
                 "
               ></span>
             </button>
+            <button
+              class="tool-btn"
+              onclick="showImportGraphMenu()"
+              title="Import from Desmos or GeoGebra"
+            >
+              <span
+                class="tool-icon"
+                role="img"
+                aria-label="Import graph"
+                style="
+                  --m: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 2v19h21'/%3E%3Cpath d='M7 17c3-9 5-11 8-6s4 3 8-7'/%3E%3Cpath d='M19 4h4v4'/%3E%3C/svg%3E&quot;);
+                "
+              ></span>
+            </button>
           </div>
           <input type="file" id="import-file-input" accept=".json" style="display: none" />
+          <input type="file" id="import-graph-input" accept=".ggb,.json,.xml" style="display: none" />
         </div>
         <aside class="sidebar" id="right-sidebar"></aside>
       </main>
@@ -882,6 +972,7 @@
       <div id="popup-box">
         <h2 id="pop-title"></h2>
         <p id="pop-msg"></p>
+        <div id="pop-body"></div>
         <div class="pop-btns" id="pop-btns"></div>
       </div>
     </div>
@@ -972,7 +1063,73 @@
           if (e.cpx !== undefined) e.cpx *= kx;
           if (e.cpy !== undefined) e.cpy *= ky;
           if (e.span !== undefined) e.span *= ks;
+          if (e.paths)
+            e.paths.forEach((path) =>
+              path.forEach((q) => {
+                q.x *= kx;
+                q.y *= ky;
+              }),
+            );
+          if (e.poly)
+            e.poly.forEach((q) => {
+              q.x *= kx;
+              q.y *= ky;
+            });
         });
+      }
+
+      // Imported curves ("plot" elements) are stored as polylines in canvas units.
+      function plotSegs(e) {
+        const out = [];
+        e.paths.forEach((path) => {
+          for (let i = 0; i < path.length - 1; i++) out.push([path[i], path[i + 1]]);
+        });
+        return out;
+      }
+
+      function plotBounds(paths) {
+        const b = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
+        paths.forEach((path) =>
+          path.forEach((q) => {
+            b.x0 = Math.min(b.x0, q.x);
+            b.x1 = Math.max(b.x1, q.x);
+            b.y0 = Math.min(b.y0, q.y);
+            b.y1 = Math.max(b.y1, q.y);
+          }),
+        );
+        return b;
+      }
+
+      function shiftPlot(e, dx, dy) {
+        e.paths.forEach((path) =>
+          path.forEach((q) => {
+            q.x += dx;
+            q.y += dy;
+          }),
+        );
+      }
+
+      function plotPath(e) {
+        return e.paths
+          .map((path) =>
+            path
+              .map((q, i) => {
+                const s = econToSVG(q.x, q.y);
+                return `${i ? "L" : "M"}${s.x.toFixed(2)},${s.y.toFixed(2)}`;
+              })
+              .join(""),
+          )
+          .join("");
+      }
+
+      // Labels sit at the end of the longest piece, like a textbook curve label.
+      function plotLabelAnchor(e) {
+        let best = e.paths[0];
+        e.paths.forEach((p) => {
+          if (p.length > best.length) best = p;
+        });
+        const q = best[best.length - 1];
+        return econToSVG(q.x, q.y);
       }
 
       function setScaleKeepingDrawing(xs, ys) {
@@ -1323,10 +1480,14 @@
       function isShadeable(id) {
         if (id === "xaxis" || id === "yaxis") return true;
         const e = state.elements.find((x) => x.id === id);
-        return !!e && (e.type === "line" || e.type === "curve");
+        return !!e && (e.type === "line" || e.type === "curve" || e.type === "plot");
       }
 
       function elemXRangeEcon(e) {
+        if (e.type === "plot") {
+          const b = plotBounds(e.paths);
+          return [b.x0, b.x1];
+        }
         if (e.type === "line") {
           const a = state.elements.find((p) => p.id === e.p1Id),
             b = state.elements.find((p) => p.id === e.p2Id);
@@ -1338,6 +1499,10 @@
       }
 
       function elemYRangeEcon(e) {
+        if (e.type === "plot") {
+          const b = plotBounds(e.paths);
+          return [b.y0, b.y1];
+        }
         if (e.type === "line") {
           const a = state.elements.find((p) => p.id === e.p1Id),
             b = state.elements.find((p) => p.id === e.p2Id);
@@ -1375,6 +1540,14 @@
         if (boundRef === "xaxis") return 0;
         if (boundRef === "yaxis") return null;
         const e = boundRef;
+        if (e.type === "plot") {
+          for (const [p, q] of plotSegs(e)) {
+            if ((x - p.x) * (x - q.x) > 0) continue;
+            const dxp = q.x - p.x;
+            return Math.abs(dxp) > 1e-12 ? p.y + ((q.y - p.y) * (x - p.x)) / dxp : p.y;
+          }
+          return null;
+        }
         if (e.type === "line") {
           const a = state.elements.find((p) => p.id === e.p1Id),
             b = state.elements.find((p) => p.id === e.p2Id);
@@ -1403,6 +1576,14 @@
         if (boundRef === "yaxis") return 0;
         if (boundRef === "xaxis") return null;
         const e = boundRef;
+        if (e.type === "plot") {
+          for (const [p, q] of plotSegs(e)) {
+            if ((y - p.y) * (y - q.y) > 0) continue;
+            const dyp = q.y - p.y;
+            return Math.abs(dyp) > 1e-12 ? p.x + ((q.x - p.x) * (y - p.y)) / dyp : p.x;
+          }
+          return null;
+        }
         if (e.type === "line") {
           const a = state.elements.find((p) => p.id === e.p1Id),
             b = state.elements.find((p) => p.id === e.p2Id);
@@ -1428,6 +1609,8 @@
       }
 
       function computeShadePolygonEcon(shade) {
+        // Imported shading keeps a fixed outline.
+        if (shade.poly) return shade.poly;
         if (shade.region) {
           const r = computeRegion(shade.region);
           return r.poly || null;
@@ -1464,8 +1647,14 @@
           const rA = A === "xaxis" ? [0, state.xScale] : elemXRangeEcon(A);
           const rB = B === "xaxis" ? [0, state.xScale] : elemXRangeEcon(B);
           if (!rA || !rB) return null;
-          const lo = Math.max(rA[0], rB[0]),
+          let lo = Math.max(rA[0], rB[0]),
             hi = Math.min(rA[1], rB[1]);
+          // Optional clip to the x-span between two points (e.g. a DWL wedge from Q* to Qm).
+          const clip = (shade.xClip || []).map((id) => state.elements.find((p) => p.id === id));
+          if (clip.length === 2 && clip[0] && clip[1]) {
+            lo = Math.max(lo, Math.min(clip[0].ex, clip[1].ex));
+            hi = Math.min(hi, Math.max(clip[0].ex, clip[1].ex));
+          }
           if (hi <= lo) return null;
           for (let i = 0; i <= N; i++) {
             const x = lo + ((hi - lo) * i) / N;
@@ -1506,12 +1695,27 @@
       // Auto regions: shades whose outline is derived from curves identified by their Name
       // (falling back to Label), recomputed on every render so they follow edits.
       const REGION_TYPES = {
-        cs: { name: "Consumer surplus", label: "CS", color: "#3b82f6" },
-        ps: { name: "Producer surplus", label: "PS", color: "#22a35a" },
-        dwl: { name: "Deadweight loss", label: "DWL", color: "#f0a202" },
-        tax: { name: "Tax revenue", label: "Tax revenue", color: "#8b5cf6" },
-        profit: { name: "Profit", label: "Profit", color: "#e8575a" },
+        cs: { name: "Consumer surplus", label: "CS", color: "#3b82f6", hatch: "diag" },
+        ps: { name: "Producer surplus", label: "PS", color: "#22a35a", hatch: "anti" },
+        dwl: { name: "Deadweight loss", label: "DWL", color: "#f0a202", hatch: "cross" },
+        tax: { name: "Tax revenue", label: "Tax revenue", color: "#8b5cf6", hatch: "dots" },
+        profit: { name: "Profit", label: "Profit", color: "#e8575a", hatch: "dots" },
       };
+
+      // rot: SVG pattern rotation; lines: "v"/"h" strokes in the rotated tile; css: panel swatch.
+      const HATCH_STYLES = {
+        diag: { name: "Diagonal /", rot: 45, lines: ["v"], css: "-45deg" },
+        anti: { name: "Diagonal \\", rot: -45, lines: ["v"], css: "45deg" },
+        cross: { name: "Crosshatch", rot: 45, lines: ["v", "h"], css: null },
+        horiz: { name: "Horizontal", rot: 0, lines: ["h"], css: "0deg" },
+        vert: { name: "Vertical", rot: 0, lines: ["v"], css: "90deg" },
+        dots: { name: "Dotted", rot: 0, lines: [], dots: true },
+      };
+
+      function hatchStyleOf(shade) {
+        if (shade.hatchStyle && HATCH_STYLES[shade.hatchStyle]) return shade.hatchStyle;
+        return shade.region ? REGION_TYPES[shade.region].hatch : "diag";
+      }
 
       const ROLE_NAMES = ["Demand", "Supply", "Supply + tax", "MR", "MC", "AC", "Price"];
 
@@ -1534,7 +1738,9 @@
 
       function findRole(role) {
         const aliases = ROLE_ALIASES[role];
-        const cands = state.elements.filter((e) => e.type === "line" || e.type === "curve");
+        const cands = state.elements.filter(
+          (e) => e.type === "line" || e.type === "curve" || e.type === "plot",
+        );
         return (
           cands.find((e) => aliases.includes(roleKey(e.name))) ||
           cands.find((e) => !e.name && aliases.includes(roleKey(e.label))) ||
@@ -1703,6 +1909,18 @@
 
       function addRegion(type, hatch) {
         const info = REGION_TYPES[type];
+        // One region per type: clicking again just switches fill/hatch and selects it.
+        const existing = state.elements.find((e) => e.type === "shade" && e.region === type);
+        if (existing) {
+          if (!!existing.hatch !== !!hatch) {
+            pushUndo();
+            existing.hatch = !!hatch;
+            existing.opacity = hatch ? 0.4 : 0.3;
+          }
+          setMode("select");
+          selectEl(existing.id);
+          return;
+        }
         const r = computeRegion(type);
         if (!r.poly) {
           showPopup(info.name, r.error, [{ label: "OK", cls: "primary", fn: closePopup }]);
@@ -1737,25 +1955,39 @@
         const op = elem.opacity !== undefined ? elem.opacity : 0.3;
         if (elem.hatch) {
           const pid = `hatch-${elem.id}`;
+          const hs = HATCH_STYLES[hatchStyleOf(elem)];
           const defs = el("defs");
           const pat = el("pattern", {
             id: pid,
             patternUnits: "userSpaceOnUse",
             width: 8,
             height: 8,
-            patternTransform: "rotate(45)",
+            patternTransform: `rotate(${hs.rot})`,
           });
-          pat.appendChild(
-            el("line", {
+          hs.lines.forEach((dir) => {
+            const attrs = {
               x1: 0,
               y1: 0,
-              x2: 0,
-              y2: 8,
+              x2: dir === "v" ? 0 : 8,
+              y2: dir === "v" ? 8 : 0,
               stroke: col,
               "stroke-width": 1.6,
               "stroke-opacity": Math.min(1, op * 2.5),
-            }),
-          );
+            };
+            pat.appendChild(el("line", attrs));
+          });
+          if (hs.dots) {
+            // One dot per 8px tile gives an evenly spaced grid in both directions.
+            pat.appendChild(
+              el("circle", {
+                cx: 4,
+                cy: 4,
+                r: 1.3,
+                fill: col,
+                "fill-opacity": Math.min(1, op * 2.5),
+              }),
+            );
+          }
           defs.appendChild(pat);
           g.appendChild(defs);
           g.appendChild(
@@ -2076,7 +2308,7 @@
         });
         state.elements.filter((e) => e.type === "shade").forEach(drawShade);
         state.elements.filter((e) => e.type === "point" && e.guides).forEach(drawPointGuides);
-        const order = ["curve", "line", "tangent", "point", "text"];
+        const order = ["plot", "curve", "line", "tangent", "point", "text"];
         const sorted = [...state.elements]
           .filter((e) => e.type !== "shade")
           .sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
@@ -2277,6 +2509,78 @@
               elem.label,
             );
             lbl.addEventListener("mousedown", (e) => startLabelDrag(elem, 10, -7, e));
+            g.appendChild(lbl);
+          }
+          g.addEventListener("click", (e) => {
+            if (state.mode !== "select") return;
+            e.stopPropagation();
+            if (e.ctrlKey || e.metaKey) return;
+            selectEl(elem.id);
+          });
+          svg.appendChild(g);
+        } else if (elem.type === "plot") {
+          const d = plotPath(elem);
+          const col = elem.color || "#2d70b3",
+            th = elem.thickness || 2;
+          const da = elem.dotted ? "8 5" : "none";
+          const g = el("g", {
+            "data-id": elem.id,
+            cursor: "move",
+            "pointer-events": "all",
+          });
+          if (sel) {
+            g.appendChild(
+              el("path", {
+                d: d,
+                stroke: "rgba(30,130,255,0.28)",
+                "stroke-width": th + 10,
+                fill: "none",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+              }),
+            );
+          }
+          g.appendChild(
+            el("path", {
+              d: d,
+              stroke: "rgba(0,0,0,0)",
+              "stroke-width": 14,
+              fill: "none",
+              "pointer-events": "stroke",
+            }),
+          );
+          g.appendChild(
+            el("path", {
+              d: d,
+              stroke: col,
+              "stroke-width": th,
+              fill: "none",
+              "stroke-dasharray": da,
+              "stroke-linecap": "round",
+              "stroke-linejoin": "round",
+            }),
+          );
+          g.addEventListener("mousedown", handleMousedown);
+          if (elem.label) {
+            const anchor = plotLabelAnchor(elem);
+            const lox = elem.lox !== undefined ? elem.lox : 6,
+              loy = elem.loy !== undefined ? elem.loy : -6;
+            const lx = anchor.x + lox,
+              ly = anchor.y + loy;
+            const lbl = txt(
+              "text",
+              {
+                x: lx,
+                y: ly,
+                class: "svg-lbl",
+                "font-size": 13,
+                fill: elem.labelColor || col,
+                style: "cursor:move;pointer-events:all",
+                ...labelAttrs(elem, lx, ly),
+              },
+              elem.label,
+            );
+            lbl.addEventListener("mousedown", (e) => startLabelDrag(elem, 6, -6, e));
             g.appendChild(lbl);
           }
           g.addEventListener("click", (e) => {
@@ -2607,6 +2911,17 @@
         const h = e.currentTarget.getAttribute("data-h");
         const elem = state.elements.find((x) => x.id === tid);
         if (!elem) return;
+        // A curve's wide invisible hit stroke can cover a thin shaded region (e.g. DWL);
+        // unless the click is right on the visible stroke, let the region take it.
+        if (!h && (elem.type === "line" || elem.type === "curve" || elem.type === "plot")) {
+          const near = nearestElement(sp.x, sp.y);
+          const nearEl = near && state.elements.find((x) => x.id === near);
+          if (nearEl && nearEl.type === "shade") {
+            selectElMaybeAdd(near, e);
+            e.preventDefault();
+            return;
+          }
+        }
         if (e.ctrlKey || e.metaKey) {
           selectElMaybeAdd(tid, e);
           e.preventDefault();
@@ -2665,6 +2980,13 @@
             origAey: a.ey,
             origBex: b.ex,
             origBey: b.ey,
+          };
+        } else if (elem.type === "plot") {
+          drag = {
+            type: "plot-body",
+            id: tid,
+            startSP: sp,
+            orig: JSON.parse(JSON.stringify(elem.paths)),
           };
         } else if (elem.type === "tangent" && h === "t") {
           drag = {
@@ -2743,7 +3065,18 @@
             pts: pts,
           };
         }
+        if (elem.type === "plot") {
+          return {
+            kind: "segs",
+            segs: plotSegs(elem).map(([p, q]) => [econToSVG(p.x, p.y), econToSVG(q.x, q.y)]),
+          };
+        }
         return null;
+      }
+
+      function geoSegs(G) {
+        if (G.kind === "segment") return [[G.p1, G.p2]];
+        return G.kind === "segs" ? G.segs : polySegs(G.pts);
       }
 
       function findIntersections() {
@@ -2753,8 +3086,8 @@
           for (let j = i + 1; j < geos.length; j++) {
             const A = geos[i],
               B = geos[j];
-            const segsA = A.kind === "segment" ? [[A.p1, A.p2]] : polySegs(A.pts);
-            const segsB = B.kind === "segment" ? [[B.p1, B.p2]] : polySegs(B.pts);
+            const segsA = geoSegs(A);
+            const segsB = geoSegs(B);
             for (const [a1, a2] of segsA) {
               for (const [b1, b2] of segsB) {
                 const ip = lineIntersect(a1, a2, b1, b2);
@@ -2842,6 +3175,17 @@
                 bestPt = pt;
               }
             }
+          } else if (elem.type === "plot") {
+            plotSegs(elem).forEach(([p, q]) => {
+              const a = econToSVG(p.x, p.y),
+                b = econToSVG(q.x, q.y);
+              const proj = nearestPointOnSeg(sx, sy, a.x, a.y, b.x, b.y);
+              const d = Math.hypot(proj.x - sx, proj.y - sy);
+              if (d < bestD) {
+                bestD = d;
+                bestPt = proj;
+              }
+            });
           }
         });
         return bestPt
@@ -3031,6 +3375,28 @@
           elem.y1 = ep1.y;
           elem.x2 = ep2.x;
           elem.y2 = ep2.y;
+          renderCanvas();
+        } else if (drag.type === "plot-body") {
+          const elem = state.elements.find((x) => x.id === drag.id);
+          if (!elem) return;
+          const a = svgToEcon(drag.startSP.x, drag.startSP.y),
+            b = svgToEcon(sp.x, sp.y);
+          let dx = b.x - a.x,
+            dy = b.y - a.y;
+          if (e.shiftKey) {
+            dx = Math.round(dx);
+            dy = Math.round(dy);
+          }
+          // Keep the whole curve on the canvas.
+          const bb = plotBounds(drag.orig);
+          dx = Math.max(-bb.x0, Math.min(state.xScale - bb.x1, dx));
+          dy = Math.max(-bb.y0, Math.min(state.yScale - bb.y1, dy));
+          elem.paths = drag.orig.map((path) =>
+            path.map((q) => ({
+              x: q.x + dx,
+              y: q.y + dy,
+            })),
+          );
           renderCanvas();
         } else if (drag.type === "tangentcurve-slide") {
           const elem = state.elements.find((x) => x.id === drag.id);
@@ -3233,6 +3599,10 @@
               }
               prev = cur;
             }
+          } else if (elem.type === "plot") {
+            hit = plotSegs(elem).some(([p, q]) =>
+              segIntersectsRect(econToSVG(p.x, p.y), econToSVG(q.x, q.y), rect),
+            );
           } else if (elem.type === "tangent") {
             const curve = state.elements.find((x) => x.id === elem.curveId);
             if (curve) {
@@ -3301,6 +3671,12 @@
               const pt = qBez(p1, cp, p2, t);
               d = Math.min(d, Math.hypot(pt.x - sx, pt.y - sy));
             }
+          } else if (elem.type === "plot") {
+            for (const [p, q] of plotSegs(elem)) {
+              const a = econToSVG(p.x, p.y),
+                b = econToSVG(q.x, q.y);
+              d = Math.min(d, ptSegDist(sx, sy, a.x, a.y, b.x, b.y));
+            }
           } else if (elem.type === "tangent") {
             const c = state.elements.find((x) => x.id === elem.curveId);
             if (!c) continue;
@@ -3327,7 +3703,7 @@
             bestId = elem.id;
           }
         }
-        const onStroke = bestId !== null && bestD <= 6 / scale;
+        const onStroke = bestId !== null && bestD <= 4 / scale;
         if (!onStroke) {
           for (let i = state.elements.length - 1; i >= 0; i--) {
             const elem = state.elements[i];
@@ -3957,7 +4333,7 @@
               return state.elements.find((x) => x.id === e.lineId);
             }
             if (e.type === "shade") {
-              if (e.region) return true;
+              if (e.region || e.poly) return true;
               const okA =
                 e.boundA === "xaxis" ||
                 e.boundA === "yaxis" ||
@@ -4024,6 +4400,10 @@
             delete dupe.t;
             delete dupe.span;
             delete dupe.pointId;
+          } else if (dupe.type === "plot") {
+            shiftPlot(dupe, off, off);
+          } else if (dupe.type === "shade" && dupe.poly) {
+            shiftPlot({ paths: [dupe.poly] }, off, off);
           } else if (dupe.type === "line") {
             dupe.p1Id = idMap[src.p1Id] !== undefined ? idMap[src.p1Id] : src.p1Id;
             dupe.p2Id = idMap[src.p2Id] !== undefined ? idMap[src.p2Id] : src.p2Id;
@@ -4032,6 +4412,8 @@
           } else if (dupe.type === "shade") {
             dupe.boundA = idMap[src.boundA] !== undefined ? idMap[src.boundA] : src.boundA;
             dupe.boundB = idMap[src.boundB] !== undefined ? idMap[src.boundB] : src.boundB;
+            if (src.xClip)
+              dupe.xClip = src.xClip.map((id) => (idMap[id] !== undefined ? idMap[id] : id));
           }
           state.elements.push(dupe);
           newIds.push(dupe.id);
@@ -4077,6 +4459,10 @@
               e.cpx += dx;
               e.cpy += dy;
             }
+          } else if (e && e.type === "plot") {
+            shiftPlot(e, dx, dy);
+          } else if (e && e.type === "shade" && e.poly) {
+            shiftPlot({ paths: [e.poly] }, dx, dy);
           }
         });
         renderCanvas();
@@ -4196,9 +4582,10 @@
         ]);
       }
 
-      function showPopup(title, msg, buttons) {
+      function showPopup(title, msg, buttons, body) {
         document.getElementById("pop-title").textContent = title;
         document.getElementById("pop-msg").textContent = msg;
+        document.getElementById("pop-body").replaceChildren(...(body ? [body] : []));
         const bc = document.getElementById("pop-btns");
         bc.innerHTML = "";
         buttons.forEach((b) => {
@@ -4351,6 +4738,2278 @@
         const file = e.target.files[0];
         if (file) importJSONFile(file);
         e.target.value = "";
+      });
+
+      // ---------- Import from Desmos / GeoGebra ----------
+      // A graph is read into "items" in the source's own units (curves as functions,
+      // points, segments), sampled over the positive quadrant of the source's view,
+      // and placed on the canvas with tick labels that carry the original units.
+
+      function nthRoot(x, n) {
+        if (x < 0 && Math.abs(n % 2) === 1) return -Math.pow(-x, 1 / n);
+        return Math.pow(x, 1 / n);
+      }
+
+      const IMPORT_BUILTINS = {
+        sin: Math.sin,
+        cos: Math.cos,
+        tan: Math.tan,
+        sec: (x) => 1 / Math.cos(x),
+        csc: (x) => 1 / Math.sin(x),
+        cosec: (x) => 1 / Math.sin(x),
+        cot: (x) => 1 / Math.tan(x),
+        arcsin: Math.asin,
+        arccos: Math.acos,
+        arctan: (y, x) => (x === undefined ? Math.atan(y) : Math.atan2(y, x)),
+        asin: Math.asin,
+        acos: Math.acos,
+        atan: Math.atan,
+        atan2: Math.atan2,
+        sinh: Math.sinh,
+        cosh: Math.cosh,
+        tanh: Math.tanh,
+        arcsinh: Math.asinh,
+        arccosh: Math.acosh,
+        arctanh: Math.atanh,
+        asinh: Math.asinh,
+        acosh: Math.acosh,
+        atanh: Math.atanh,
+        sqrt: Math.sqrt,
+        cbrt: Math.cbrt,
+        root: (n, x) => nthRoot(x, n),
+        nroot: (x, n) => nthRoot(x, n),
+        exp: Math.exp,
+        ln: Math.log,
+        lg: Math.log10,
+        ld: Math.log2,
+        abs: Math.abs,
+        sign: Math.sign,
+        sgn: Math.sign,
+        floor: Math.floor,
+        ceil: Math.ceil,
+        round: Math.round,
+        min: Math.min,
+        max: Math.max,
+        mod: (a, b) => ((a % b) + b) % b,
+        factorial: (n) => {
+          if (!(n >= 0) || n !== Math.floor(n) || n > 170) return NaN;
+          let r = 1;
+          for (let i = 2; i <= n; i++) r *= i;
+          return r;
+        },
+      };
+
+      const IMPORT_CONSTS = { pi: Math.PI, e: Math.E, tau: 2 * Math.PI };
+
+      const IMPORT_REL = new Set(["<", ">", "<=", ">=", "=", "==", "!="]);
+
+      const LATEX_FN_CMDS = new Set([
+        "sin", "cos", "tan", "sec", "csc", "cot", "arcsin", "arccos", "arctan",
+        "sinh", "cosh", "tanh", "ln", "log", "exp", "min", "max", "lg",
+      ]);
+
+      const LATEX_GREEK = new Set([
+        "alpha", "beta", "gamma", "delta", "epsilon", "varepsilon", "zeta", "eta", "theta",
+        "iota", "kappa", "lambda", "mu", "nu", "xi", "rho", "sigma", "upsilon", "phi",
+        "varphi", "chi", "psi", "omega", "Gamma", "Delta", "Theta", "Lambda", "Xi", "Pi",
+        "Sigma", "Phi", "Psi", "Omega",
+      ]);
+
+      // Desmos stores expressions as LaTeX. Letters are single-character names
+      // (so "xy" is x·y), optionally subscripted: "p_{1}" becomes the name "p_1".
+      function tokenizeLatex(src) {
+        const s = String(src),
+          toks = [],
+          closers = [];
+        let i = 0,
+          nextGroup = null;
+        const op = (v) => toks.push({ k: "op", v: v });
+        const readGroup = () => {
+          while (s[i] === " ") i++;
+          if (s[i] !== "{") return s[i++] || "";
+          let depth = 0;
+          const start = i + 1;
+          for (; i < s.length; i++) {
+            if (s[i] === "{") depth++;
+            else if (s[i] === "}" && --depth === 0) {
+              i++;
+              return s.slice(start, i - 1);
+            }
+          }
+          throw new Error("Unbalanced braces");
+        };
+        const readSub = () => {
+          if (s[i] !== "_") return "";
+          i++;
+          return "_" + readGroup().replace(/[^A-Za-z0-9]/g, "");
+        };
+        while (i < s.length) {
+          const c = s[i];
+          if (/\s/.test(c)) {
+            i++;
+            continue;
+          }
+          const group = nextGroup;
+          nextGroup = null;
+          const num = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i, i + 40));
+          if (num) {
+            toks.push({ k: "num", v: parseFloat(num[1]) });
+            i += num[1].length;
+            continue;
+          }
+          if (/[A-Za-z]/.test(c)) {
+            i++;
+            toks.push({ k: "id", v: c + readSub() });
+            continue;
+          }
+          if (c === "{") {
+            i++;
+            if (group === "frac1") closers.push({ close: "}", emit: [")", "/", "("], then: "frac2" });
+            else if (group === "frac2" || group === "rootn") closers.push({ close: "}", emit: [")", ")"] });
+            else {
+              op("(");
+              closers.push({ close: "}", emit: [")"] });
+            }
+            continue;
+          }
+          if (c === "}" || (c === "]" && closers.length && closers[closers.length - 1].close === "]")) {
+            i++;
+            const cl = closers.pop();
+            if (!cl) throw new Error("Unbalanced braces");
+            cl.emit.forEach(op);
+            if (cl.then) nextGroup = cl.then;
+            continue;
+          }
+          if (c === "\\") {
+            const m = /^\\([A-Za-z]+|.)/.exec(s.slice(i, i + 30));
+            const cmd = m ? m[1] : "";
+            i += m ? m[0].length : 1;
+            if (cmd === "left" || cmd === "right") {
+              let d = s[i];
+              if (d === "\\") {
+                d = s.slice(i, i + 2);
+                i += 2;
+              } else i++;
+              if (d === "|") {
+                if (cmd === "left") toks.push({ k: "fn", v: "abs" });
+                op(cmd === "left" ? "(" : ")");
+              } else if (d === "\\{" || d === "\\}") op(d[1]);
+              else if (d !== ".") op(d);
+            } else if (cmd === "frac" || cmd === "dfrac" || cmd === "tfrac") {
+              op("(");
+              op("(");
+              nextGroup = "frac1";
+            } else if (cmd === "sqrt") {
+              if (s[i] === "[") {
+                i++;
+                toks.push({ k: "fn", v: "root" });
+                op("(");
+                closers.push({ close: "]", emit: [",", "("], then: "rootn" });
+              } else toks.push({ k: "fn", v: "sqrt" });
+            } else if (cmd === "operatorname" || cmd === "mathrm" || cmd === "text") {
+              const name = readGroup().trim();
+              const isFn = IMPORT_BUILTINS[name] || name === "log" || name === "polygon";
+              toks.push({ k: isFn ? "fn" : "id", v: name });
+            } else if (LATEX_FN_CMDS.has(cmd)) {
+              const t = { k: "fn", v: cmd };
+              if (cmd === "log" && s[i] === "_") {
+                i++;
+                t.base = parseFloat(readGroup());
+              }
+              toks.push(t);
+            } else if (cmd === "cdot" || cmd === "times" || cmd === "ast") op("*");
+            else if (cmd === "div") op("/");
+            else if (cmd === "pi") toks.push({ k: "id", v: "pi" });
+            else if (cmd === "tau") toks.push({ k: "id", v: "tau" });
+            else if (cmd === "infty") toks.push({ k: "num", v: Infinity });
+            else if (cmd === "le" || cmd === "leq") op("<=");
+            else if (cmd === "ge" || cmd === "geq") op(">=");
+            else if (cmd === "lt") op("<");
+            else if (cmd === "gt") op(">");
+            else if (cmd === "ne" || cmd === "neq") op("!=");
+            else if (cmd === "{" || cmd === "}") op(cmd);
+            else if (LATEX_GREEK.has(cmd)) toks.push({ k: "id", v: cmd + readSub() });
+            else if (!/^([ ,;:!]|quad|qquad|space)$/.test(cmd)) throw new Error(`"\\${cmd}" isn't supported`);
+            continue;
+          }
+          if (c === "<" || c === ">") {
+            if (s[i + 1] === "=") {
+              op(c + "=");
+              i += 2;
+            } else {
+              op(c);
+              i++;
+            }
+            continue;
+          }
+          if ("+-*/^(),:=|![]".includes(c)) {
+            op(c);
+            i++;
+            continue;
+          }
+          throw new Error(`"${c}" isn't supported`);
+        }
+        return toks;
+      }
+
+      const SUPERSCRIPT_DIGITS = {
+        "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+        "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9", "⁻": "-",
+      };
+
+      // GeoGebra stores plain text such as "f(x) = 3x² + a x", with multi-letter names.
+      function tokenizePlain(src) {
+        const s = String(src),
+          toks = [];
+        let i = 0;
+        const op = (v) => toks.push({ k: "op", v: v });
+        while (i < s.length) {
+          const c = s[i];
+          if (/\s/.test(c)) {
+            i++;
+            continue;
+          }
+          const num = /^(\d+\.?\d*|\.\d+)(E[+-]?\d+)?/.exec(s.slice(i, i + 40));
+          if (num) {
+            toks.push({ k: "num", v: parseFloat(num[0]) });
+            i += num[0].length;
+            continue;
+          }
+          if (SUPERSCRIPT_DIGITS[c]) {
+            let sup = "";
+            while (SUPERSCRIPT_DIGITS[s[i]]) sup += SUPERSCRIPT_DIGITS[s[i++]];
+            op("^");
+            op("(");
+            if (sup[0] === "-") {
+              op("-");
+              sup = sup.slice(1);
+            }
+            toks.push({ k: "num", v: parseFloat(sup) });
+            op(")");
+            continue;
+          }
+          const id = /^[A-Za-zͰ-Ͽ][A-Za-z0-9Ͱ-Ͽ']*(_\{[^}]*\}|_[A-Za-z0-9]+)?/.exec(
+            s.slice(i, i + 60),
+          );
+          if (id && c !== "π") {
+            i += id[0].length;
+            toks.push({ k: "id", v: id[0].replace(/_\{([^}]*)\}/, "_$1") });
+            continue;
+          }
+          const two = s.slice(i, i + 2);
+          if (["<=", ">=", "==", "!=", "&&", "||"].includes(two)) {
+            op(two);
+            i += 2;
+            continue;
+          }
+          i++;
+          if (c === "π") toks.push({ k: "id", v: "pi" });
+          else if (c === "ℯ") toks.push({ k: "id", v: "e" });
+          else if (c === "∞") toks.push({ k: "num", v: Infinity });
+          else if (c === "√") toks.push({ k: "fn", v: "sqrt" });
+          else if (c === "∛") toks.push({ k: "fn", v: "cbrt" });
+          else if (c === "≤") op("<=");
+          else if (c === "≥") op(">=");
+          else if (c === "≠") op("!=");
+          else if (c === "∧") op("&&");
+          else if (c === "∨") op("||");
+          else if (c === "·" || c === "×") op("*");
+          else if (c === "÷") op("/");
+          else if (c === "−") op("-");
+          else if (c === "[") op("(");
+          else if (c === "]") op(")");
+          else if ("+-*/^(),:=<>|!".includes(c)) op(c);
+          else throw new Error(`"${c}" isn't supported`);
+        }
+        return toks;
+      }
+
+      function importCtx(dialect) {
+        return {
+          dialect: dialect,
+          vars: new Map(),
+          funcs: new Map(),
+          values: new Map(),
+          evaluating: new Set(),
+          broken: new Map(),
+        };
+      }
+
+      function parseImportTokens(toks, ctx) {
+        let p = 0,
+          absDepth = 0;
+        const peek = () => toks[p];
+        const isOp = (t, v) => !!t && t.k === "op" && t.v === v;
+        const expect = (v) => {
+          if (!isOp(toks[p], v)) throw new Error(`expected "${v}"`);
+          p++;
+        };
+        const startsFactor = (t) =>
+          !!t &&
+          (t.k !== "op" ||
+            t.v === "(" ||
+            t.v === "{" ||
+            t.v === "[" ||
+            (t.v === "|" && absDepth === 0));
+        function parseOr() {
+          let a = parseAnd();
+          while (isOp(peek(), "||")) {
+            p++;
+            a = { t: "or", a: a, b: parseAnd() };
+          }
+          return a;
+        }
+        function parseAnd() {
+          let a = parseCmp();
+          while (isOp(peek(), "&&")) {
+            p++;
+            a = { t: "and", a: a, b: parseCmp() };
+          }
+          return a;
+        }
+        function parseCmp() {
+          const terms = [parseSum()],
+            ops = [];
+          while (peek() && peek().k === "op" && IMPORT_REL.has(peek().v)) {
+            ops.push(toks[p++].v);
+            terms.push(parseSum());
+          }
+          return ops.length ? { t: "cmp", ops: ops, terms: terms } : terms[0];
+        }
+        function parseSum() {
+          let a = parseProduct();
+          while (isOp(peek(), "+") || isOp(peek(), "-")) {
+            const o = toks[p++].v;
+            a = { t: "bin", op: o, a: a, b: parseProduct() };
+          }
+          return a;
+        }
+        function parseProduct() {
+          let a = parseUnary();
+          for (;;) {
+            if (isOp(peek(), "*") || isOp(peek(), "/")) {
+              const o = toks[p++].v;
+              a = { t: "bin", op: o, a: a, b: parseUnary() };
+            } else if (startsFactor(peek())) {
+              a = { t: "bin", op: "*", a: a, b: parsePower() };
+            } else return a;
+          }
+        }
+        function parseUnary() {
+          if (isOp(peek(), "-")) {
+            p++;
+            return { t: "neg", a: parseUnary() };
+          }
+          if (isOp(peek(), "+")) {
+            p++;
+            return parseUnary();
+          }
+          return parsePower();
+        }
+        function parsePower() {
+          const base = parsePostfix();
+          if (isOp(peek(), "^")) {
+            p++;
+            return { t: "bin", op: "^", a: base, b: parseUnary() };
+          }
+          return base;
+        }
+        function parsePostfix() {
+          let a = parsePrimary();
+          while (isOp(peek(), "!")) {
+            p++;
+            a = { t: "call", fn: "factorial", args: [a] };
+          }
+          return a;
+        }
+        function parseArgs() {
+          expect("(");
+          const args = [];
+          if (!isOp(peek(), ")")) {
+            args.push(parseOr());
+            while (isOp(peek(), ",")) {
+              p++;
+              args.push(parseOr());
+            }
+          }
+          expect(")");
+          return args;
+        }
+        function parsePrimary() {
+          const t = toks[p++];
+          if (!t) throw new Error("the expression ends too early");
+          if (t.k === "num") return { t: "num", v: t.v };
+          if (t.k === "fn") {
+            let pw = null;
+            if (isOp(peek(), "^")) {
+              p++;
+              pw = parsePostfix();
+            }
+            const args = isOp(peek(), "(") ? parseArgs() : [parsePower()];
+            const node = { t: "call", fn: t.v, args: args, base: t.base };
+            return pw ? { t: "bin", op: "^", a: node, b: pw } : node;
+          }
+          if (t.k === "id") {
+            const name = t.v;
+            if (isOp(peek(), "(")) {
+              if (ctx.funcs.has(name)) return { t: "call", fn: name, user: true, args: parseArgs() };
+              if (ctx.dialect === "ggb") {
+                // x(A) and y(A): a point's coordinates, e.g. Integral(f, 0, x(H)).
+                const arg = toks[p + 1],
+                  shut = toks[p + 2];
+                if (
+                  (name === "x" || name === "y") &&
+                  arg &&
+                  arg.k === "id" &&
+                  ctx.points &&
+                  ctx.points.has(arg.v) &&
+                  isOp(shut, ")")
+                ) {
+                  p += 3;
+                  return { t: "num", v: ctx.points.get(arg.v)[name] };
+                }
+                const low = name.toLowerCase();
+                if (low === "if") {
+                  const args = parseArgs(),
+                    branches = [];
+                  for (let k = 0; k + 1 < args.length; k += 2) branches.push({ c: args[k], v: args[k + 1] });
+                  return {
+                    t: "piece",
+                    branches: branches,
+                    other: args.length % 2 ? args[args.length - 1] : null,
+                  };
+                }
+                if (IMPORT_BUILTINS[low] || low === "log")
+                  return { t: "call", fn: low, args: parseArgs() };
+                if (/^[A-Z]/.test(name) && name.length > 1 && !ctx.vars.has(name))
+                  throw new Error(`the ${name} command isn't supported`);
+              }
+            }
+            return { t: "var", name: name };
+          }
+          if (t.v === "(") {
+            const items = [parseOr()];
+            while (isOp(peek(), ",")) {
+              p++;
+              items.push(parseOr());
+            }
+            expect(")");
+            return items.length === 1 ? items[0] : { t: "tuple", items: items };
+          }
+          if (t.v === "{") {
+            // Desmos piecewise {cond: value, cond: value, else} or a restriction {cond}.
+            const branches = [];
+            let other = null;
+            if (!isOp(peek(), "}")) {
+              for (;;) {
+                const c = parseOr();
+                if (isOp(peek(), ":")) {
+                  p++;
+                  branches.push({ c: c, v: parseOr() });
+                } else if (c.t === "cmp" || c.t === "and" || c.t === "or") {
+                  branches.push({ c: c, v: { t: "num", v: 1 } });
+                } else other = c;
+                if (!isOp(peek(), ",")) break;
+                p++;
+              }
+            }
+            expect("}");
+            return { t: "piece", branches: branches, other: other };
+          }
+          if (t.v === "|") {
+            absDepth++;
+            const a = parseOr();
+            expect("|");
+            absDepth--;
+            return { t: "call", fn: "abs", args: [a] };
+          }
+          if (t.v === "[") throw new Error("lists aren't supported");
+          throw new Error(`unexpected "${t.v}"`);
+        }
+        const node = parseOr();
+        if (p < toks.length) throw new Error(`unexpected "${toks[p].v}"`);
+        return node;
+      }
+
+      function importPow(a, b) {
+        const r = Math.pow(a, b);
+        if (Number.isNaN(r) && a < 0) {
+          // Real odd roots, e.g. x^(1/3) for negative x.
+          const inv = 1 / b;
+          if (Math.abs(inv - Math.round(inv)) < 1e-9 && Math.round(inv) % 2) return -Math.pow(-a, b);
+        }
+        return r;
+      }
+
+      function importCmp(op, a, b) {
+        switch (op) {
+          case "<":
+            return a < b;
+          case ">":
+            return a > b;
+          case "<=":
+            return a <= b;
+          case ">=":
+            return a >= b;
+          case "!=":
+            return Math.abs(a - b) > 1e-9;
+          default:
+            return Math.abs(a - b) <= 1e-9;
+        }
+      }
+
+      function importEval(n, env) {
+        switch (n.t) {
+          case "num":
+            return n.v;
+          case "var":
+            return importResolve(n.name, env);
+          case "neg":
+            return -importEval(n.a, env);
+          case "bin": {
+            const a = importEval(n.a, env),
+              b = importEval(n.b, env);
+            if (n.op === "+") return a + b;
+            if (n.op === "-") return a - b;
+            if (n.op === "*") return a * b;
+            if (n.op === "/") return a / b;
+            return importPow(a, b);
+          }
+          case "call": {
+            if (n.user) {
+              const f = env.ctx.funcs.get(n.fn);
+              if (!f || !f.body) throw new Error(`${n.fn} couldn't be read`);
+              if ((env.depth || 0) > 50) throw new Error(`${n.fn} calls itself too deeply`);
+              const locals = {};
+              f.params.forEach((pn, k) => (locals[pn] = n.args[k] ? importEval(n.args[k], env) : NaN));
+              return importEval(f.body, { ctx: env.ctx, locals: locals, depth: (env.depth || 0) + 1 });
+            }
+            const args = n.args.map((a) => importEval(a, env));
+            if (n.fn === "log") {
+              if (n.base) return Math.log(args[0]) / Math.log(n.base);
+              if (args.length === 2) return Math.log(args[1]) / Math.log(args[0]);
+              return env.ctx.dialect === "ggb" ? Math.log(args[0]) : Math.log10(args[0]);
+            }
+            const f = IMPORT_BUILTINS[n.fn];
+            if (!f) throw new Error(`the function ${n.fn} isn't supported`);
+            return f(...args);
+          }
+          case "cmp": {
+            let prev = importEval(n.terms[0], env);
+            for (let k = 0; k < n.ops.length; k++) {
+              const cur = importEval(n.terms[k + 1], env);
+              if (!importCmp(n.ops[k], prev, cur)) return 0;
+              prev = cur;
+            }
+            return 1;
+          }
+          case "and":
+            return importEval(n.a, env) && importEval(n.b, env) ? 1 : 0;
+          case "or":
+            return importEval(n.a, env) || importEval(n.b, env) ? 1 : 0;
+          case "piece":
+            for (const br of n.branches) if (importEval(br.c, env)) return importEval(br.v, env);
+            return n.other ? importEval(n.other, env) : NaN;
+          default:
+            throw new Error("a point can't be used as a number here");
+        }
+      }
+
+      function importResolve(name, env) {
+        const ctx = env.ctx;
+        if (env.locals && Object.prototype.hasOwnProperty.call(env.locals, name)) return env.locals[name];
+        if (ctx.vars.has(name)) {
+          if (ctx.values.has(name)) return ctx.values.get(name);
+          const def = ctx.vars.get(name);
+          if (typeof def === "number") return def;
+          if (ctx.evaluating.has(name)) throw new Error(`${name} is defined in terms of itself`);
+          ctx.evaluating.add(name);
+          try {
+            const v = importEval(def, { ctx: ctx, locals: {} });
+            ctx.values.set(name, v);
+            return v;
+          } finally {
+            ctx.evaluating.delete(name);
+          }
+        }
+        if (IMPORT_CONSTS[name] !== undefined) return IMPORT_CONSTS[name];
+        if (ctx.broken && ctx.broken.has(name)) throw new Error(`it uses ${name}, and ${ctx.broken.get(name)}`);
+        // GeoGebra writes a·b·c as "abc" when none of them is a name on its own.
+        if (ctx.dialect === "ggb" && name.length > 1 && !/[0-9_']/.test(name)) {
+          let prod = 1;
+          for (const ch of name) prod *= importResolve(ch, env);
+          return prod;
+        }
+        throw new Error(`${name} isn't defined`);
+      }
+
+      function importUses(n, name, ctx) {
+        if (!n || typeof n !== "object") return false;
+        if (Array.isArray(n)) return n.some((c) => importUses(c, name, ctx));
+        if (n.t === "var") {
+          if (n.name === name) return true;
+          return (
+            ctx.dialect === "ggb" &&
+            n.name.length > 1 &&
+            !ctx.vars.has(n.name) &&
+            IMPORT_CONSTS[n.name] === undefined &&
+            n.name.includes(name)
+          );
+        }
+        return Object.values(n).some((v) => v && typeof v === "object" && importUses(v, name, ctx));
+      }
+
+      // Turns an expression into a plain function of the named variables. It is run once
+      // up front so undefined names or unsupported functions are reported, not drawn blank.
+      function importCompile(body, ctx, names) {
+        const probe = {};
+        names.forEach((n) => (probe[n] = 0.7312));
+        importEval(body, { ctx: ctx, locals: probe });
+        return (...vals) => {
+          const locals = {};
+          names.forEach((n, k) => (locals[n] = vals[k]));
+          try {
+            const v = importEval(body, { ctx: ctx, locals: locals });
+            return typeof v === "number" ? v : NaN;
+          } catch (err) {
+            return NaN;
+          }
+        };
+      }
+
+      // Pulls Desmos restrictions such as "…\{y>0\}" off an expression, so
+      // y = f(x) {y > 0} is still drawn as a function of x.
+      function importSplitRestrictions(n, conds) {
+        const isRestriction = (q) =>
+          q.t === "piece" && !q.other && q.branches.length && q.branches.every((b) => b.v.t === "num" && b.v.v === 1);
+        // An undefined restriction makes the whole expression undefined, so one found
+        // anywhere in a product (e.g. "a + bx\{y>0\}") applies to all of it.
+        if (n.t === "bin" && n.op === "*") {
+          if (isRestriction(n.b)) {
+            n.b.branches.forEach((b) => conds.push(b.c));
+            return importSplitRestrictions(n.a, conds);
+          }
+          if (isRestriction(n.a)) {
+            n.a.branches.forEach((b) => conds.push(b.c));
+            return importSplitRestrictions(n.b, conds);
+          }
+        }
+        if (n.t === "bin")
+          return { ...n, a: importSplitRestrictions(n.a, conds), b: importSplitRestrictions(n.b, conds) };
+        if (n.t === "neg") return { t: "neg", a: importSplitRestrictions(n.a, conds) };
+        return n;
+      }
+
+      // The curve L = R, drawn only where every condition in `extra` holds.
+      function importCurve(L0, R0, sty, extra, ctx) {
+        const uses = (n, v) => importUses(n, v, ctx);
+        const isVar = (n, v) => n.t === "var" && n.name === v;
+        const condNodes = extra.slice();
+        const L = importSplitRestrictions(L0, condNodes),
+          R = importSplitRestrictions(R0, condNodes);
+        const conds = condNodes.map((c) => importCompile(c, ctx, ["x", "y"]));
+        const ok = (x, y) => conds.every((c) => c(x, y));
+        const fx = (body) => {
+          const f = importCompile(body, ctx, ["x"]);
+          return { kind: "fx", f: conds.length ? (x) => (ok(x, f(x)) ? f(x) : NaN) : f, style: sty };
+        };
+        const fy = (body) => {
+          const f = importCompile(body, ctx, ["y"]);
+          return { kind: "fy", f: conds.length ? (y) => (ok(f(y), y) ? f(y) : NaN) : f, style: sty };
+        };
+        if (isVar(L, "y") && !uses(R, "y")) return fx(R);
+        if (isVar(R, "y") && !uses(L, "y")) return fx(L);
+        if (isVar(L, "x") && !uses(R, "x")) return fy(R);
+        if (isVar(R, "x") && !uses(L, "x")) return fy(L);
+        const body = { t: "bin", op: "-", a: L, b: R };
+        if (!uses(body, "x") && !uses(body, "y")) return null;
+        const F = importCompile(body, ctx, ["x", "y"]);
+        return { kind: "implicit", F: conds.length ? (x, y) => (ok(x, y) ? F(x, y) : NaN) : F, style: sty };
+      }
+
+      // "a < y < b" and "p ∧ q" broken into single comparisons {L, op, R}.
+      function importAtoms(n) {
+        if (n.t === "and") {
+          const a = importAtoms(n.a),
+            b = importAtoms(n.b);
+          return a && b ? a.concat(b) : null;
+        }
+        if (n.t !== "cmp" || n.ops.includes("!=")) return null;
+        return n.ops.map((op, k) => ({ L: n.terms[k], op: op, R: n.terms[k + 1] }));
+      }
+
+      function importPointOf(n, ctx) {
+        if (n.t === "var" && ctx.vars.has(n.name) && ctx.vars.get(n.name).t === "tuple")
+          return importPointOf(ctx.vars.get(n.name), ctx);
+        if (n.t !== "tuple" || n.items.length !== 2) throw new Error("only polygons made of points are supported");
+        const env = { ctx: ctx, locals: {} };
+        return { x: importEval(n.items[0], env), y: importEval(n.items[1], env) };
+      }
+
+      // Returns one item, or a list (a shaded region plus its outline).
+      function importClassify(node, style, ctx, opts = {}) {
+        const uses = (n, v) => importUses(n, v, ctx);
+        if (node.t === "cmp" || node.t === "and") {
+          if (uses(node, "r") || uses(node, "theta")) throw new Error("polar graphs aren't supported");
+          const atoms = importAtoms(node);
+          if (!atoms) return null;
+          const isEq = (op) => op === "=" || op === "==";
+          if (atoms.length === 1 && isEq(atoms[0].op)) return importCurve(atoms[0].L, atoms[0].R, style, [], ctx);
+          if (atoms.some((a) => isEq(a.op))) return null;
+          // An inequality: shade where it holds, and draw each boundary where the
+          // rest of the inequality holds (dashed when strict, as Desmos/GeoGebra do).
+          const out = [];
+          if (style.fill > 0) {
+            const holds = importCompile(node, ctx, ["x", "y"]);
+            out.push({ kind: "region", R: (x, y) => holds(x, y) === 1, style: style });
+          }
+          if (!style.noBoundary) {
+            const loose = { "<": "<=", ">": ">=" };
+            atoms.forEach((a, k) => {
+              const others = atoms
+                .filter((b, j) => j !== k)
+                .map((b) => ({ t: "cmp", ops: [loose[b.op] || b.op], terms: [b.L, b.R] }));
+              const strict = a.op === "<" || a.op === ">";
+              const curve = importCurve(a.L, a.R, strict ? { ...style, dashed: true } : style, others, ctx);
+              if (curve) out.push(curve);
+            });
+          }
+          return out;
+        }
+        if (node.t === "call" && node.fn === "polygon") {
+          const pts = node.args.map((a) => importPointOf(a, ctx));
+          if (pts.length < 3) return null;
+          const out = [];
+          if (style.fill > 0) out.push({ kind: "polygon", pts: pts, style: style });
+          if (!style.noBoundary) out.push({ kind: "polyline", pts: pts.concat([pts[0]]), style: style });
+          return out;
+        }
+        if (node.t === "tuple") {
+          if (node.items.length !== 2) return null;
+          if (uses(node, "t")) {
+            const X = importCompile(node.items[0], ctx, ["t"]),
+              Y = importCompile(node.items[1], ctx, ["t"]);
+            return {
+              kind: "param",
+              P: (t) => [X(t), Y(t)],
+              tmin: opts.tmin !== undefined ? opts.tmin : 0,
+              tmax: opts.tmax !== undefined ? opts.tmax : 1,
+              style: style,
+            };
+          }
+          const env = { ctx: ctx, locals: {} };
+          return {
+            kind: "point",
+            x: importEval(node.items[0], env),
+            y: importEval(node.items[1], env),
+            style: style,
+          };
+        }
+        if (uses(node, "x") && !uses(node, "y"))
+          return { kind: "fx", f: importCompile(node, ctx, ["x"]), style: style };
+        return null;
+      }
+
+      // Splits "a=3" (a variable) and "f(x)=..." (a function) from graphable expressions.
+      function importSplitDef(toks) {
+        let depth = 0,
+          eqAt = -1,
+          rels = 0;
+        toks.forEach((t, k) => {
+          if (t.k !== "op") return;
+          if ("([{".includes(t.v)) depth++;
+          else if (")]}".includes(t.v)) depth--;
+          else if (depth === 0 && IMPORT_REL.has(t.v)) {
+            rels++;
+            if (t.v === "=") eqAt = k;
+          }
+        });
+        if (rels !== 1 || eqAt < 0) return null;
+        const lhs = toks.slice(0, eqAt),
+          rhs = toks.slice(eqAt + 1);
+        const reserved = ["x", "y", "r", "theta"];
+        if (lhs.length === 1 && lhs[0].k === "id" && !reserved.includes(lhs[0].v))
+          return { kind: "var", name: lhs[0].v, rhs: rhs };
+        if (
+          lhs.length >= 4 &&
+          lhs[0].k === "id" &&
+          !reserved.includes(lhs[0].v) &&
+          lhs[1].k === "op" &&
+          lhs[1].v === "(" &&
+          lhs[lhs.length - 1].k === "op" &&
+          lhs[lhs.length - 1].v === ")"
+        ) {
+          const inner = lhs.slice(2, -1),
+            params = [];
+          for (let k = 0; k < inner.length; k++) {
+            if (k % 2 === 0 && inner[k].k === "id") params.push(inner[k].v);
+            else if (k % 2 === 1 && inner[k].k === "op" && inner[k].v === ",") continue;
+            else return null;
+          }
+          if (params.length) return { kind: "fn", name: lhs[0].v, params: params, rhs: rhs };
+        }
+        return null;
+      }
+
+      function importShort(s) {
+        s = String(s).replace(/\\left|\\right|\\operatorname/g, "").replace(/\s+/g, " ");
+        return s.length > 48 ? s.slice(0, 45) + "…" : s;
+      }
+
+      function clampNum(v, lo, hi, dflt) {
+        return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : dflt;
+      }
+
+      function parseDesmosState(st) {
+        if (!st || !st.expressions || !Array.isArray(st.expressions.list))
+          throw new Error("That doesn't look like a Desmos graph.");
+        const ctx = importCtx("desmos");
+        const list = st.expressions.list;
+        const hiddenFolders = new Set(list.filter((e) => e.type === "folder" && e.hidden).map((e) => e.id));
+        const isShown = (e) => !e.hidden && !(e.folderId && hiddenFolders.has(e.folderId));
+        const styleOf = (e) => {
+          const lw = parseFloat(e.lineWidth);
+          const ps = parseFloat(e.pointSize);
+          const lbl = e.showLabel && typeof e.label === "string" && !/[$`\\]/.test(e.label) ? e.label : "";
+          return {
+            color: /^#[0-9a-f]{6}$/i.test(e.color || "") ? e.color : "#2d70b3",
+            thickness: Math.round(clampNum(lw * 0.8, 0.5, 8, 2) * 2) / 2,
+            dashed: e.lineStyle === "DASHED" || e.lineStyle === "DOTTED",
+            size: Math.round(clampNum((ps * 5) / 9, 2, 14, 5) * 2) / 2,
+            label: lbl,
+            // Shading of inequalities and polygons (Desmos defaults to 40%).
+            fill: e.fill === false ? 0 : clampNum(parseFloat(e.fillOpacity), 0, 1, 0.4),
+            noBoundary: e.lines === false || parseFloat(e.lineOpacity) === 0 || lw === 0,
+          };
+        };
+        const skipped = [],
+          entries = [];
+        list.forEach((e) => {
+          // Older saves leave out "type" on plain expressions.
+          if ((e.type || "expression") !== "expression" || !e.latex || !e.latex.trim()) return;
+          if (/\\to(?![A-Za-z])/.test(e.latex)) return; // actions (a → b) aren't graphs
+          const en = { e: e };
+          try {
+            en.toks = tokenizeLatex(e.latex);
+            en.def = importSplitDef(en.toks);
+            if (en.def && en.def.kind === "fn")
+              ctx.funcs.set(en.def.name, { params: en.def.params, body: null });
+          } catch (err) {
+            en.err = err;
+          }
+          entries.push(en);
+        });
+        entries.forEach((en) => {
+          if (!en.err) {
+            try {
+              if (en.def) {
+                en.def.body = parseImportTokens(en.def.rhs, ctx);
+                if (en.def.kind === "var") ctx.vars.set(en.def.name, en.def.body);
+                else ctx.funcs.get(en.def.name).body = en.def.body;
+              } else en.node = parseImportTokens(en.toks, ctx);
+            } catch (err) {
+              en.err = err;
+            }
+          }
+          // A definition that can't be read (e.g. an integral) is only reported if
+          // something drawn depends on it.
+          if (en.err) {
+            const m = /^\s*([A-Za-z])(?:_\{?([A-Za-z0-9]+)\}?)?\s*(?:\\left\(|=)/.exec(en.e.latex);
+            const name = en.def ? en.def.name : m && m[1] + (m[2] ? "_" + m[2] : "");
+            if (name && !["x", "y"].includes(name)) {
+              ctx.broken.set(name, en.err.message);
+              // Function definitions are graphed by Desmos, so those are still reported.
+              en.quiet = en.def ? en.def.kind === "var" : !m[0].endsWith("(");
+            }
+          }
+        });
+        const items = [];
+        const evalLatex = (latex, locals = {}) => {
+          if (latex === undefined || latex === null || String(latex).trim() === "") return NaN;
+          try {
+            const v = importEval(parseImportTokens(tokenizeLatex(latex), ctx), { ctx: ctx, locals: locals });
+            return typeof v === "number" ? v : NaN;
+          } catch (err) {
+            return NaN;
+          }
+        };
+        entries.forEach((en) => {
+          const e = en.e;
+          if (!isShown(e)) return;
+          const fail = (err) => skipped.push(`${importShort(e.latex)} — ${err.message}`);
+          if (en.err) return en.quiet ? undefined : fail(en.err);
+          let node = en.node;
+          if (en.def) {
+            const b = en.def.body;
+            if (en.def.kind === "var") {
+              // Sliders and constants aren't drawn; named points and polygons are.
+              if (b.t !== "tuple" && !(b.t === "call" && b.fn === "polygon")) return;
+              node = b;
+              if (!e.label) e.label = e.showLabel ? en.def.name : "";
+            } else if (en.def.params.length === 1 && en.def.params[0] !== "y") {
+              // Desmos graphs one-variable definitions such as p(q) = … against the x-axis.
+              try {
+                if (importUses(b, "y", ctx)) return;
+                items.push({ kind: "fx", f: importCompile(b, ctx, en.def.params), style: styleOf(e), source: e.latex });
+              } catch (err) {
+                fail(err);
+              }
+              return;
+            } else return;
+          }
+          const dom = e.parametricDomain || {};
+          try {
+            const found = importClassify(node, styleOf(e), ctx, {
+              tmin: dom.min !== undefined ? evalLatex(dom.min) : undefined,
+              tmax: dom.max !== undefined ? evalLatex(dom.max) : undefined,
+            });
+            [].concat(found || []).forEach((item) => {
+              item.source = e.latex;
+              items.push(item);
+            });
+          } catch (err) {
+            fail(err);
+          }
+        });
+        list.forEach((e) => {
+          if (e.type !== "table" || !isShown(e) || !Array.isArray(e.columns) || e.columns.length < 2) return;
+          const [xc, ...ycs] = e.columns;
+          let xName = null;
+          try {
+            const tk = tokenizeLatex(xc.latex || "");
+            if (tk.length === 1 && tk[0].k === "id") xName = tk[0].v;
+          } catch (err) {}
+          const xs = (xc.values || []).map((v) => evalLatex(v));
+          ycs.forEach((col) => {
+            if (col.hidden) return;
+            let ys = (col.values || []).map((v) => evalLatex(v));
+            if (!ys.some(Number.isFinite) && col.latex && xName)
+              ys = xs.map((x) => evalLatex(col.latex, { [xName]: x }));
+            const pts = xs
+              .map((x, k) => ({ x: x, y: ys[k] }))
+              .filter((q) => Number.isFinite(q.x) && Number.isFinite(q.y));
+            if (!pts.length) return;
+            const style = styleOf(col);
+            const lines = col.lines || col.columnMode === "LINES" || col.columnMode === "POINTS_AND_LINES";
+            const dots = col.points !== false && col.columnMode !== "LINES";
+            if (dots) pts.forEach((q) => items.push({ kind: "point", x: q.x, y: q.y, style: style }));
+            if (lines && pts.length > 1) items.push({ kind: "polyline", pts: pts, style: style });
+          });
+        });
+        const g = st.graph || {};
+        return {
+          source: "Desmos",
+          viewport: g.viewport,
+          xLabel: g.xAxisLabel,
+          yLabel: g.yAxisLabel,
+          showGrid: g.showGrid !== false,
+          items: items,
+          skipped: skipped,
+        };
+      }
+
+      // .ggb files are zip archives; the construction lives in geogebra.xml.
+      async function ggbReadXML(buf) {
+        const dv = new DataView(buf),
+          u8 = new Uint8Array(buf);
+        let eocd = -1;
+        for (let k = u8.length - 22; k >= Math.max(0, u8.length - 65557); k--) {
+          if (dv.getUint32(k, true) === 0x06054b50) {
+            eocd = k;
+            break;
+          }
+        }
+        if (eocd < 0) throw new Error("That .ggb file couldn't be opened.");
+        const count = dv.getUint16(eocd + 10, true);
+        let off = dv.getUint32(eocd + 16, true);
+        for (let n = 0; n < count && dv.getUint32(off, true) === 0x02014b50; n++) {
+          const method = dv.getUint16(off + 10, true),
+            csize = dv.getUint32(off + 20, true),
+            nameLen = dv.getUint16(off + 28, true),
+            extraLen = dv.getUint16(off + 30, true),
+            commLen = dv.getUint16(off + 32, true),
+            local = dv.getUint32(off + 42, true);
+          const name = new TextDecoder().decode(u8.subarray(off + 46, off + 46 + nameLen));
+          if (name === "geogebra.xml") {
+            const start = local + 30 + dv.getUint16(local + 26, true) + dv.getUint16(local + 28, true);
+            const data = u8.subarray(start, start + csize);
+            if (method === 0) return new TextDecoder().decode(data);
+            if (method === 8) {
+              if (typeof DecompressionStream === "undefined")
+                throw new Error("This browser can't unzip .ggb files. Try an up-to-date Chrome, Edge, Firefox or Safari.");
+              const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+              return await new Response(stream).text();
+            }
+            throw new Error("That .ggb file uses an unsupported compression.");
+          }
+          off += 46 + nameLen + extraLen + commLen;
+        }
+        throw new Error("That .ggb file has no geogebra.xml inside.");
+      }
+
+      // GeoGebra fill patterns as CruxPlot hatch styles (null for a plain fill).
+      function ggbHatch(oc) {
+        const type = parseInt(oc.getAttribute("fillType")) || 0;
+        if (type === 4) return "dots";
+        if (type === 2 || type === 3 || (type >= 5 && type <= 7)) return "cross";
+        if (type !== 1) return null;
+        const a = ((((parseFloat(oc.getAttribute("hatchAngle")) || 0) % 180) + 180) % 180);
+        if (a < 22.5 || a >= 157.5) return "horiz";
+        if (a < 67.5) return "diag";
+        if (a < 112.5) return "vert";
+        return "anti";
+      }
+
+      function parseGeoGebraXML(text) {
+        const doc = new DOMParser().parseFromString(text, "application/xml");
+        const cons = doc.querySelector("construction");
+        if (!cons) throw new Error("That file doesn't contain a GeoGebra construction.");
+        const ctx = importCtx("ggb");
+        const child = (node, tag) => [...node.children].find((c) => c.tagName === tag);
+        const num = (node, attr) => (node ? parseFloat(node.getAttribute(attr)) : NaN);
+        const exprs = new Map(),
+          cmds = new Map(),
+          els = [];
+        const argList = (node) =>
+          node
+            ? [...node.attributes]
+                .filter((a) => /^a\d+$/.test(a.name))
+                .sort((a, b) => a.name.slice(1) - b.name.slice(1))
+                .map((a) => a.value)
+            : [];
+        [...cons.children].forEach((node) => {
+          if (node.tagName === "expression") exprs.set(node.getAttribute("label"), node.getAttribute("exp"));
+          else if (node.tagName === "command") {
+            const cmd = {
+              name: node.getAttribute("name"),
+              inputs: argList(child(node, "input")),
+              outputs: argList(child(node, "output")),
+            };
+            cmd.outputs.forEach((o, idx) => o && cmds.set(o, { ...cmd, index: idx }));
+          } else if (node.tagName === "element") els.push(node);
+        });
+        const points = new Map();
+        ctx.points = points;
+        els.forEach((el) => {
+          const type = el.getAttribute("type"),
+            label = el.getAttribute("label");
+          if (type === "numeric" || type === "angle") {
+            const v = num(child(el, "value"), "val");
+            if (Number.isFinite(v)) ctx.vars.set(label, v);
+          } else if (type === "point") {
+            const c = child(el, "coords");
+            const z = num(c, "z");
+            if (c && z) points.set(label, { x: num(c, "x") / z, y: num(c, "y") / z });
+          } else if (type === "function") {
+            const m = /^\s*[^\s(=]+\s*\(([^)]*)\)\s*=/.exec(exprs.get(label) || "");
+            const params = m ? m[1].split(",").map((s) => s.trim()) : ["x"];
+            ctx.funcs.set(label, { params: params, body: null });
+          }
+        });
+        const parsePlain = (s) => parseImportTokens(tokenizePlain(s), ctx);
+        const rhsOf = (exp) => {
+          // "f(x) = x²" or "eq1: x y = 10" → the part the function or curve is made of.
+          const s = exp.replace(/^\s*[A-Za-z][\w']*\s*:\s*/, "");
+          const m = /^\s*[^\s(=]+\s*\([^)]*\)\s*=(.*)$/.exec(s);
+          return m ? m[1] : s;
+        };
+        els.forEach((el) => {
+          if (el.getAttribute("type") !== "function") return;
+          const label = el.getAttribute("label");
+          const exp = exprs.get(label);
+          const f = ctx.funcs.get(label);
+          try {
+            if (exp) f.body = parsePlain(rhsOf(exp));
+            else {
+              const cmd = cmds.get(label);
+              if (cmd && cmd.name === "Function" && cmd.inputs.length >= 3) {
+                const inner = ctx.funcs.has(cmd.inputs[0])
+                  ? { t: "call", fn: cmd.inputs[0], user: true, args: [{ t: "var", name: "x" }] }
+                  : parsePlain(cmd.inputs[0]);
+                const x = { t: "var", name: "x" };
+                f.body = {
+                  t: "piece",
+                  branches: [
+                    {
+                      c: { t: "cmp", ops: ["<=", "<="], terms: [parsePlain(cmd.inputs[1]), x, parsePlain(cmd.inputs[2])] },
+                      v: inner,
+                    },
+                  ],
+                  other: null,
+                };
+              }
+            }
+          } catch (err) {
+            f.error = err;
+          }
+        });
+        const pointRef = (ref) => {
+          if (points.has(ref)) return points.get(ref);
+          const n = parsePlain(ref);
+          if (n.t !== "tuple") throw new Error(`${ref} isn't a point`);
+          const env = { ctx: ctx, locals: {} };
+          return { x: importEval(n.items[0], env), y: importEval(n.items[1], env) };
+        };
+        const rgbHex = (c) =>
+          "#" +
+          ["r", "g", "b"]
+            .map((k) => Math.max(0, Math.min(255, parseInt(c.getAttribute(k)) || 0)).toString(16).padStart(2, "0"))
+            .join("");
+        const items = [],
+          skipped = [];
+        const quiet = new Set(["numeric", "angle", "boolean", "text", "image", "button", "textfield", "list"]);
+        // A function given by label ("D") or written out ("10 - x").
+        const funcRef = (ref) =>
+          importCompile(
+            ctx.funcs.has(ref) ? { t: "call", fn: ref, user: true, args: [{ t: "var", name: "x" }] } : parsePlain(ref),
+            ctx,
+            ["x"],
+          );
+        const numRef = (ref) => importEval(parsePlain(ref), { ctx: ctx, locals: {} });
+        els.forEach((el) => {
+          const type = el.getAttribute("type"),
+            label = el.getAttribute("label");
+          const show = child(el, "show");
+          const cmd = cmds.get(label);
+          // Integral(f, a, b) and IntegralBetween(f, g, a, b) are numbers drawn as shaded areas.
+          const isIntegral = type === "numeric" && cmd && /^Integral(Between)?$/.test(cmd.name);
+          if (!show || show.getAttribute("object") !== "true" || (quiet.has(type) && !isIntegral)) return;
+          const oc = child(el, "objColor"),
+            ls = child(el, "lineStyle"),
+            cap = child(el, "caption");
+          const th = num(ls, "thickness");
+          let lbl = "";
+          if (show.getAttribute("label") === "true") {
+            const cv = cap && cap.getAttribute("val");
+            lbl = cv && !cv.includes("%") ? cv : label;
+          }
+          const style = {
+            color: oc ? rgbHex(oc) : "#222222",
+            thickness: Math.round(clampNum(th * 0.4, 0.5, 8, 2) * 2) / 2,
+            dashed: ls ? (parseInt(ls.getAttribute("type")) || 0) !== 0 : false,
+            size: clampNum(num(child(el, "pointSize"), "val"), 2, 14, 5),
+            label: lbl,
+            name: label,
+            fill: oc ? clampNum(parseFloat(oc.getAttribute("alpha")), 0, 1, 0) : 0,
+            hatch: oc ? ggbHatch(oc) : null,
+            noBoundary: !(th > 0),
+          };
+          const source = exprs.get(label) || (cmd ? `${cmd.name}(${cmd.inputs.join(", ")})` : label);
+          const add = (item) => {
+            item.style = item.style || style;
+            item.source = source;
+            items.push(item);
+          };
+          try {
+            if (isIntegral) {
+              const between = cmd.name === "IntegralBetween";
+              if (cmd.inputs.length < (between ? 4 : 3)) throw new Error("its bounds couldn't be found");
+              const f = funcRef(cmd.inputs[0]),
+                g = between ? funcRef(cmd.inputs[1]) : () => 0;
+              const a = numRef(cmd.inputs[between ? 2 : 1]),
+                b = numRef(cmd.inputs[between ? 3 : 2]);
+              const lo = Math.min(a, b),
+                hi = Math.max(a, b);
+              add({
+                kind: "region",
+                R: (x, y) => {
+                  if (x < lo || x > hi) return false;
+                  const u = f(x),
+                    v = g(x);
+                  return y >= Math.min(u, v) && y <= Math.max(u, v);
+                },
+                style: { ...style, fill: style.fill || 0.1 },
+              });
+            } else if (type === "polygon") {
+              if (!cmd || cmd.name !== "Polygon") throw new Error("its corners couldn't be found");
+              if (style.fill > 0)
+                add({ kind: "polygon", pts: cmd.inputs.map(pointRef), style: { ...style, label: "" } });
+            } else if (type === "functionnvar") {
+              const exp = exprs.get(label);
+              if (!exp) throw new Error("no formula found");
+              // GeoGebra doesn't label inequality regions on the graph.
+              const found = importClassify(parsePlain(rhsOf(exp)), { ...style, label: "" }, ctx);
+              if (!found || (Array.isArray(found) && !found.length))
+                throw new Error("only inequalities in x and y are supported");
+              [].concat(found).forEach(add);
+            } else if (type === "point") {
+              const q = points.get(label);
+              if (q) add({ kind: "point", x: q.x, y: q.y });
+            } else if (type === "function") {
+              const f = ctx.funcs.get(label);
+              if (f.error) throw f.error;
+              if (!f.body) throw new Error(cmd ? `the ${cmd.name} command isn't supported` : "no formula found");
+              const call = { t: "call", fn: label, user: true, args: [{ t: "var", name: "x" }] };
+              add({ kind: "fx", f: importCompile(call, ctx, ["x"]) });
+            } else if (type === "line") {
+              const c = child(el, "coords");
+              add({ kind: "line", a: num(c, "x"), b: num(c, "y"), c: num(c, "z") });
+            } else if (type === "segment" || type === "ray") {
+              if (!cmd) throw new Error("its end points couldn't be found");
+              let A, B;
+              if (cmd.name === "Polygon" && cmd.index > 0) {
+                const n = cmd.inputs.length;
+                A = pointRef(cmd.inputs[cmd.index - 1]);
+                B = pointRef(cmd.inputs[cmd.index % n]);
+              } else {
+                A = pointRef(cmd.inputs[0]);
+                B = pointRef(cmd.inputs[1]);
+              }
+              if (type === "ray") B = { x: A.x + (B.x - A.x) * 1e4, y: A.y + (B.y - A.y) * 1e4 };
+              add({ kind: "seg", a: A, b: B });
+            } else if (type === "polyline") {
+              if (!cmd) throw new Error("its points couldn't be found");
+              add({ kind: "polyline", pts: cmd.inputs.map(pointRef) });
+            } else if (type === "conic") {
+              const m = child(el, "matrix");
+              const A = ["A0", "A1", "A2", "A3", "A4", "A5"].map((k) => num(m, k));
+              if (A.some((v) => !Number.isFinite(v))) throw new Error("no equation found");
+              add({
+                kind: "implicit",
+                F: (x, y) => A[0] * x * x + A[1] * y * y + A[2] + 2 * A[3] * x * y + 2 * A[4] * x + 2 * A[5] * y,
+              });
+            } else if (type === "implicitpoly" || type === "implicitcurve") {
+              const exp = exprs.get(label);
+              if (!exp) throw new Error("no equation found");
+              const found = importClassify(parsePlain(exp.replace(/^\s*[A-Za-z][\w']*\s*:\s*/, "")), style, ctx);
+              [].concat(found || []).forEach(add);
+            } else if (type === "curvecartesian") {
+              if (!cmd || cmd.name !== "Curve" || cmd.inputs.length < 5)
+                throw new Error("only Curve(x(t), y(t), t, start, end) curves are supported");
+              const tv = cmd.inputs[2];
+              const X = importCompile(parsePlain(cmd.inputs[0]), ctx, [tv]),
+                Y = importCompile(parsePlain(cmd.inputs[1]), ctx, [tv]);
+              const env = { ctx: ctx, locals: {} };
+              add({
+                kind: "param",
+                P: (t) => [X(t), Y(t)],
+                tmin: importEval(parsePlain(cmd.inputs[3]), env),
+                tmax: importEval(parsePlain(cmd.inputs[4]), env),
+              });
+            } else if (type !== "vector") {
+              throw new Error(`${type} objects aren't supported`);
+            }
+          } catch (err) {
+            skipped.push(`${label}: ${importShort(source)} — ${err.message}`);
+          }
+        });
+        const ev = doc.querySelector("euclidianView");
+        let viewport = null,
+          xLabel = "",
+          yLabel = "",
+          showGrid = true;
+        if (ev) {
+          const size = child(ev, "size"),
+            cs = child(ev, "coordSystem");
+          const w = num(size, "width"),
+            h = num(size, "height"),
+            x0 = num(cs, "xZero"),
+            y0 = num(cs, "yZero"),
+            sx = num(cs, "scale"),
+            sy = num(cs, "yscale") || sx;
+          if ([w, h, x0, y0, sx, sy].every(Number.isFinite) && sx > 0 && sy > 0)
+            viewport = { xmin: -x0 / sx, xmax: (w - x0) / sx, ymin: -(h - y0) / sy, ymax: y0 / sy };
+          ev.querySelectorAll("axis").forEach((a) => {
+            if (a.getAttribute("id") === "0") xLabel = a.getAttribute("label") || "";
+            if (a.getAttribute("id") === "1") yLabel = a.getAttribute("label") || "";
+          });
+          const evs = child(ev, "evSettings");
+          if (evs) showGrid = evs.getAttribute("grid") === "true";
+        }
+        return {
+          source: "GeoGebra",
+          viewport: viewport,
+          xLabel: xLabel,
+          yLabel: yLabel,
+          showGrid: showGrid,
+          items: items,
+          skipped: skipped,
+        };
+      }
+
+      // Samples y = f(x) (or x = f(y)) from a to b. Steep stretches are subdivided so
+      // curves stay smooth, and jumps that survive subdivision (asymptotes, step
+      // functions) break the curve instead of drawing a vertical connector.
+      function importSampleExplicit(f, a, b, lo, hi) {
+        const H = hi - lo,
+          N = 300,
+          tol = H * 0.01,
+          pieces = [];
+        let cur = [],
+          budget = 150000;
+        const side = (v) => (v > hi ? 1 : v < lo ? -1 : 0);
+        const flush = () => {
+          if (cur.length > 1) pieces.push(cur);
+          cur = [];
+        };
+        const emit = (u, v) => {
+          if (Number.isFinite(v)) cur.push({ u: u, v: v });
+          else flush();
+        };
+        const refine = (u0, v0, u1, v1, depth) => {
+          const f0 = Number.isFinite(v0),
+            f1 = Number.isFinite(v1);
+          const offscreen = f0 && f1 && side(v0) !== 0 && side(v0) === side(v1);
+          const needs = f0 !== f1 || (f0 && f1 && !offscreen && Math.abs(v1 - v0) > tol);
+          if (needs && depth < 12 && budget-- > 0) {
+            const um = (u0 + u1) / 2,
+              vm = f(um);
+            refine(u0, v0, um, vm, depth + 1);
+            refine(um, vm, u1, v1, depth + 1);
+            return;
+          }
+          if (needs && f0 && f1 && Math.abs(v1 - v0) > H * 0.05) flush();
+          emit(u1, v1);
+        };
+        let u0 = a,
+          v0 = f(a);
+        emit(u0, v0);
+        for (let k = 1; k <= N; k++) {
+          const u1 = a + ((b - a) * k) / N,
+            v1 = f(u1);
+          refine(u0, v0, u1, v1, 0);
+          u0 = u1;
+          v0 = v1;
+        }
+        flush();
+        return pieces;
+      }
+
+      // Marching squares for implicit curves F(x, y) = 0, joined into polylines.
+      function importContour(F, W) {
+        const n = 160,
+          m = n + 2;
+        const dx = (W.x1 - W.x0) / n,
+          dy = (W.y1 - W.y0) / n;
+        const X = (i) => W.x0 + (i - 1) * dx,
+          Y = (j) => W.y0 + (j - 1) * dy;
+        const vals = new Float64Array((m + 1) * (m + 1));
+        for (let j = 0; j <= m; j++) for (let i = 0; i <= m; i++) vals[j * (m + 1) + i] = F(X(i), Y(j));
+        const V = (i, j) => vals[j * (m + 1) + i];
+        const cross = (i0, j0, i1, j1) => {
+          const a = V(i0, j0),
+            b = V(i1, j1),
+            t = a / (a - b);
+          return {
+            x: X(i0) + (X(i1) - X(i0)) * t,
+            y: Y(j0) + (Y(j1) - Y(j0)) * t,
+            key: `${i0},${j0},${i1},${j1}`,
+          };
+        };
+        const segs = [];
+        for (let j = 0; j < m; j++) {
+          for (let i = 0; i < m; i++) {
+            const a = V(i, j),
+              b = V(i + 1, j),
+              c = V(i + 1, j + 1),
+              d = V(i, j + 1);
+            if (![a, b, c, d].every(Number.isFinite)) continue;
+            const sa = a > 0,
+              sb = b > 0,
+              sc = c > 0,
+              sd = d > 0;
+            const e = [];
+            if (sa !== sb) e.push(["B", cross(i, j, i + 1, j)]);
+            if (sb !== sc) e.push(["R", cross(i + 1, j, i + 1, j + 1)]);
+            if (sd !== sc) e.push(["T", cross(i, j + 1, i + 1, j + 1)]);
+            if (sa !== sd) e.push(["L", cross(i, j, i, j + 1)]);
+            let pairs = [];
+            if (e.length === 2) pairs = [[e[0][1], e[1][1]]];
+            else if (e.length === 4) {
+              const at = (k) => e.find((q) => q[0] === k)[1];
+              const centre = (a + b + c + d) / 4 > 0;
+              pairs =
+                centre === sa
+                  ? [[at("B"), at("R")], [at("T"), at("L")]]
+                  : [[at("L"), at("B")], [at("R"), at("T")]];
+            }
+            const big = Math.max(Math.abs(a), Math.abs(b), Math.abs(c), Math.abs(d));
+            pairs.forEach(([p, q]) => {
+              // A sign change through a pole (e.g. 1/x) isn't a real crossing.
+              const mid = F((p.x + q.x) / 2, (p.y + q.y) / 2);
+              if (Number.isFinite(mid) && Math.abs(mid) <= big) segs.push([p, q]);
+            });
+          }
+        }
+        const adj = new Map();
+        segs.forEach((s, k) =>
+          s.forEach((q) => {
+            if (!adj.has(q.key)) adj.set(q.key, []);
+            adj.get(q.key).push(k);
+          }),
+        );
+        const used = new Uint8Array(segs.length),
+          paths = [];
+        for (let k = 0; k < segs.length; k++) {
+          if (used[k]) continue;
+          used[k] = 1;
+          const path = [segs[k][0], segs[k][1]];
+          [true, false].forEach((forward) => {
+            for (;;) {
+              const end = forward ? path[path.length - 1] : path[0];
+              const nk = (adj.get(end.key) || []).find((q) => !used[q]);
+              if (nk === undefined) break;
+              used[nk] = 1;
+              const nxt = segs[nk][0].key === end.key ? segs[nk][1] : segs[nk][0];
+              if (forward) path.push(nxt);
+              else path.unshift(nxt);
+            }
+          });
+          paths.push(path.map((q) => ({ x: q.x, y: q.y })));
+        }
+        return paths;
+      }
+
+      function importClipSeg(p, q, W) {
+        const dx = q.x - p.x,
+          dy = q.y - p.y;
+        let t0 = 0,
+          t1 = 1;
+        const checks = [
+          [-dx, p.x - W.x0],
+          [dx, W.x1 - p.x],
+          [-dy, p.y - W.y0],
+          [dy, W.y1 - p.y],
+        ];
+        for (const [pp, qq] of checks) {
+          if (pp === 0) {
+            if (qq < 0) return null;
+          } else {
+            const r = qq / pp;
+            if (pp < 0) {
+              if (r > t1) return null;
+              if (r > t0) t0 = r;
+            } else {
+              if (r < t0) return null;
+              if (r < t1) t1 = r;
+            }
+          }
+        }
+        // Unclipped ends are returned as-is: p + 1·(q − p) can differ from q in the last
+        // bit, and importClip joins segments only where their ends match exactly.
+        return [
+          t0 === 0 ? p : { x: p.x + t0 * dx, y: p.y + t0 * dy },
+          t1 === 1 ? q : { x: p.x + t1 * dx, y: p.y + t1 * dy },
+        ];
+      }
+
+      function importClip(path, W) {
+        const out = [];
+        let cur = [];
+        const flush = () => {
+          if (cur.length > 1) out.push(cur);
+          cur = [];
+        };
+        for (let k = 0; k < path.length - 1; k++) {
+          const c = importClipSeg(path[k], path[k + 1], W);
+          if (!c) {
+            flush();
+            continue;
+          }
+          const last = cur[cur.length - 1];
+          if (!last || last.x !== c[0].x || last.y !== c[0].y) {
+            flush();
+            cur.push(c[0]);
+          }
+          cur.push(c[1]);
+        }
+        flush();
+        return out;
+      }
+
+      // Outlines of the area where R(x, y) holds inside W. Each column is split into
+      // runs of y where R holds; runs are matched to the previous column's runs to grow
+      // polygons, and where a run starts or stops between columns the edge is refined.
+      function importRegionPolys(R, W, n) {
+        const dy = (W.y1 - W.y0) / n,
+          dx = (W.x1 - W.x0) / n;
+        // f(a) holds and f(b) doesn't: the crossing point, just inside a.
+        const bisect = (f, a, b) => {
+          for (let k = 0; k < 28; k++) {
+            const c = (a + b) / 2;
+            if (f(c)) a = c;
+            else b = c;
+          }
+          return a;
+        };
+        const runsAt = (x) => {
+          const runs = [];
+          const inY = (t) => R(x, t);
+          let start = null,
+            prevIn = false,
+            prevY = W.y0;
+          for (let j = 0; j <= n; j++) {
+            const y = j === n ? W.y1 : W.y0 + j * dy;
+            const inside = inY(y);
+            if (inside && !prevIn) start = j === 0 ? y : bisect(inY, y, prevY);
+            if (!inside && prevIn) runs.push([start, bisect(inY, prevY, y)]);
+            prevIn = inside;
+            prevY = y;
+          }
+          if (prevIn) runs.push([start, W.y1]);
+          return runs;
+        };
+        const overlaps = (a, b) => a[0] <= b[1] && b[0] <= a[1];
+        const mid = (r) => (r[0] + r[1]) / 2;
+        // The run through y0, found locally so runs thinner than a row aren't missed.
+        const runAround = (x, y0) => {
+          const f = (t) => R(x, t);
+          if (!f(y0)) return [y0, y0];
+          const a = Math.max(W.y0, y0 - 2 * dy),
+            b = Math.min(W.y1, y0 + 2 * dy);
+          if ((f(a) && a > W.y0) || (f(b) && b < W.y1)) {
+            const r = runsAt(x).find((q) => q[0] <= y0 && y0 <= q[1]);
+            if (r) return r;
+          }
+          return [f(a) ? a : bisect(f, y0, a), f(b) ? b : bisect(f, y0, b)];
+        };
+        const edgeAt = (a, x, y0) => {
+          const r = runAround(x, y0);
+          a.tops.push({ x: x, y: r[1] });
+          a.bots.push({ x: x, y: r[0] });
+        };
+        // A region narrowing to a point (e.g. a surplus triangle at equilibrium) gets
+        // thinner than the row spacing before it ends, so extend its edges to meet.
+        const extendTip = (a, atEnd) => {
+          const T = a.tops,
+            B = a.bots;
+          if (T.length < 2 || B.length < 2) return;
+          // The last two columns (or first two), counted from each list's own end since
+          // a tip added at the start sits on the top list only.
+          const at = (L, k) => (atEnd ? L[L.length - 1 - k] : L[k]);
+          const t0 = at(T, 0),
+            t1 = at(T, 1),
+            b0 = at(B, 0),
+            b1 = at(B, 1);
+          const w0 = t0.y - b0.y,
+            w1 = t1.y - b1.y,
+            step = t0.x - t1.x;
+          if (!(w1 > w0) || !step) return;
+          const s = w0 / (w1 - w0);
+          if (s > 1.5) return;
+          const tip = {
+            x: Math.max(W.x0, Math.min(W.x1, t0.x + s * step)),
+            y: t0.y + s * (t0.y - t1.y),
+          };
+          if (atEnd) T.push(tip);
+          else T.unshift(tip);
+        };
+        const polys = [];
+        const close = (a) => {
+          extendTip(a, false);
+          extendTip(a, true);
+          polys.push(a.tops.concat(a.bots.slice().reverse()));
+        };
+        let active = [],
+          prevX = null;
+        for (let i = 0; i <= n; i++) {
+          const x = i === n ? W.x1 : W.x0 + i * dx;
+          const runs = runsAt(x);
+          // Follow a region that has narrowed below the row spacing.
+          active.forEach((a) => {
+            const y0 = mid(a.last);
+            if (!runs.some((r) => overlaps(a.last, r)) && R(x, y0)) runs.push(runAround(x, y0));
+          });
+          runs.sort((p, q) => p[0] - q[0]);
+          const used = runs.map(() => false),
+            next = [];
+          active.forEach((a) => {
+            const hits = runs.map((r, k) => (overlaps(a.last, r) ? k : -1)).filter((k) => k >= 0);
+            const k = hits.length === 1 ? hits[0] : -1;
+            if (k >= 0 && active.filter((b) => overlaps(b.last, runs[k])).length === 1) {
+              a.tops.push({ x: x, y: runs[k][1] });
+              a.bots.push({ x: x, y: runs[k][0] });
+              a.last = runs[k];
+              used[k] = true;
+              next.push(a);
+              return;
+            }
+            if (!hits.length) {
+              const y0 = mid(a.last);
+              edgeAt(a, bisect((t) => R(t, y0), prevX, x), y0);
+            }
+            close(a);
+          });
+          runs.forEach((r, k) => {
+            if (used[k]) return;
+            const a = { tops: [], bots: [], last: r };
+            const y0 = mid(r);
+            if (prevX !== null && !R(prevX, y0)) edgeAt(a, bisect((t) => R(t, y0), x, prevX), y0);
+            a.tops.push({ x: x, y: r[1] });
+            a.bots.push({ x: x, y: r[0] });
+            next.push(a);
+          });
+          active = next;
+          prevX = x;
+        }
+        active.forEach(close);
+        return polys.filter((p) => p.length >= 3);
+      }
+
+      // Sutherland–Hodgman clip of a polygon to the window.
+      function importClipPolygon(pts, W) {
+        const cutX = (xv) => (p, q) => ({ x: xv, y: p.y + ((xv - p.x) * (q.y - p.y)) / (q.x - p.x) });
+        const cutY = (yv) => (p, q) => ({ x: p.x + ((yv - p.y) * (q.x - p.x)) / (q.y - p.y), y: yv });
+        const sides = [
+          [(p) => p.x >= W.x0, cutX(W.x0)],
+          [(p) => p.x <= W.x1, cutX(W.x1)],
+          [(p) => p.y >= W.y0, cutY(W.y0)],
+          [(p) => p.y <= W.y1, cutY(W.y1)],
+        ];
+        let out = pts.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+        for (const [inside, cut] of sides) {
+          const src = out;
+          out = [];
+          src.forEach((cur, k) => {
+            const prev = src[(k + src.length - 1) % src.length];
+            if (inside(cur)) {
+              if (!inside(prev)) out.push(cut(prev, cur));
+              out.push(cur);
+            } else if (inside(prev)) out.push(cut(prev, cur));
+          });
+        }
+        return out.length >= 3 ? [out] : [];
+      }
+
+      // Every drawable item as polylines in source units, clipped to window W.
+      // Shaded items (region, polygon) come back as closed outlines instead.
+      function importSample(item, W, coarse) {
+        if (item.kind === "region") return importRegionPolys(item.R, W, coarse ? 48 : 240);
+        if (item.kind === "polygon") return importClipPolygon(item.pts, W);
+        let paths = [];
+        const span = Math.max(W.x1 - W.x0, W.y1 - W.y0);
+        if (item.kind === "fx") {
+          paths = importSampleExplicit(item.f, W.x0, W.x1, W.y0, W.y1).map((pc) =>
+            pc.map((q) => ({ x: q.u, y: q.v })),
+          );
+        } else if (item.kind === "fy") {
+          paths = importSampleExplicit(item.f, W.y0, W.y1, W.x0, W.x1).map((pc) =>
+            pc.map((q) => ({ x: q.v, y: q.u })),
+          );
+        } else if (item.kind === "implicit") {
+          paths = importContour(item.F, W);
+        } else if (item.kind === "param") {
+          const N = 1500,
+            a = Number.isFinite(item.tmin) ? item.tmin : 0,
+            b = Number.isFinite(item.tmax) ? item.tmax : 1;
+          let cur = [];
+          for (let k = 0; k <= N; k++) {
+            const [x, y] = item.P(a + ((b - a) * k) / N);
+            const last = cur[cur.length - 1];
+            if (!Number.isFinite(x) || !Number.isFinite(y) || (last && Math.hypot(x - last.x, y - last.y) > span * 0.5)) {
+              if (cur.length > 1) paths.push(cur);
+              cur = [];
+            }
+            if (Number.isFinite(x) && Number.isFinite(y)) cur.push({ x: x, y: y });
+          }
+          if (cur.length > 1) paths.push(cur);
+        } else if (item.kind === "polyline") {
+          paths = [item.pts];
+        } else if (item.kind === "seg") {
+          paths = [[item.a, item.b]];
+        } else if (item.kind === "line") {
+          const { a, b, c } = item,
+            L = span * 10;
+          if (Math.abs(b) >= Math.abs(a)) {
+            const xa = W.x0 - L,
+              xb = W.x1 + L;
+            paths = [[{ x: xa, y: -(a * xa + c) / b }, { x: xb, y: -(a * xb + c) / b }]];
+          } else if (a) {
+            const ya = W.y0 - L,
+              yb = W.y1 + L;
+            paths = [[{ x: -(b * ya + c) / a, y: ya }, { x: -(b * yb + c) / a, y: yb }]];
+          }
+        }
+        return paths.flatMap((path) => importClip(path, W));
+      }
+
+      function importInWindow(q, W) {
+        return q.x >= W.x0 - 1e-9 && q.x <= W.x1 + 1e-9 && q.y >= W.y0 - 1e-9 && q.y <= W.y1 + 1e-9;
+      }
+
+      function importExtents(items, W) {
+        let x1 = -Infinity,
+          y1 = -Infinity;
+        items.forEach((it) => {
+          const pts = it.kind === "point" ? [it].filter((q) => importInWindow(q, W)) : importSample(it, W, true).flat();
+          pts.forEach((q) => {
+            x1 = Math.max(x1, q.x);
+            y1 = Math.max(y1, q.y);
+          });
+        });
+        return x1 > -Infinity ? { x1: x1, y1: y1 } : null;
+      }
+
+      // How far right and up the graph's focal features reach inside W: points,
+      // shaded areas and the places where two curves cross (e.g. an equilibrium).
+      function importFeatureExtent(items, W) {
+        let x1 = -Infinity,
+          y1 = -Infinity;
+        const bump = (q) => {
+          if (!importInWindow(q, W)) return;
+          x1 = Math.max(x1, q.x);
+          y1 = Math.max(y1, q.y);
+        };
+        const sx = 500 / (W.x1 - W.x0),
+          sy = 500 / (W.y1 - W.y0);
+        const curves = [];
+        items.forEach((it) => {
+          if (it.kind === "point") bump(it);
+          else if (it.kind === "region" || it.kind === "polygon") importSample(it, W, true).flat().forEach(bump);
+          else if (it.kind !== "seg")
+            curves.push(importSample(it, W).flatMap((path) => polySegs(importSimplify(path, 1, sx, sy))));
+        });
+        for (let i = 0; i < curves.length; i++)
+          for (let j = i + 1; j < curves.length; j++)
+            for (const [a, b] of curves[i])
+              for (const [c, d] of curves[j]) {
+                const q = lineIntersect(a, b, c, d);
+                if (q) bump(q);
+              }
+        return x1 > -Infinity ? { x1: x1, y1: y1 } : null;
+      }
+
+      // Tick increment of 1, 2, 2.5 or 5 × 10^k giving 4–10 intervals, choosing the
+      // one whose last tick lands closest past the content.
+      function importTicks(lo, hi) {
+        const clean = (v) => parseFloat(v.toPrecision(12));
+        const mag = Math.pow(10, Math.floor(Math.log10((hi - lo) / 5)));
+        let best = null;
+        [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10].forEach((m) => {
+          const step = m * mag;
+          const start = Math.floor(lo / step + 1e-9) * step;
+          const n = Math.ceil((hi - start) / step - 1e-9);
+          if (n < 4 || n > 10) return;
+          const span = n * step;
+          if (!best || span < best.span - 1e-9 * span) best = { start: start, step: step, n: n, span: span };
+        });
+        if (!best) best = { start: lo, step: (hi - lo) / 5, n: 5, span: hi - lo };
+        return {
+          start: clean(best.start),
+          end: clean(best.start + best.span),
+          step: clean(best.step),
+          n: best.n,
+        };
+      }
+
+      // The window starts from the positive part of the source's view, then shrinks to
+      // the content so the curve fills the canvas and its turns are easy to see.
+      function importChooseWindow(viewport, items) {
+        const vp = viewport || {};
+        const fin = (v, d) => (Number.isFinite(v) ? v : d);
+        let W = {
+          x0: Math.max(0, fin(vp.xmin, 0)),
+          x1: fin(vp.xmax, 10),
+          y0: Math.max(0, fin(vp.ymin, 0)),
+          y1: fin(vp.ymax, 10),
+        };
+        if (!(W.x1 > W.x0)) W = { ...W, x0: 0, x1: 10 };
+        if (!(W.y1 > W.y0)) W = { ...W, y0: 0, y1: 10 };
+        // Without a saved view, fit the window to the content from scratch.
+        let ext = viewport ? importExtents(items, W) : null;
+        if (!ext) {
+          // Nothing in view: try wider windows, preferring the smallest one that holds
+          // the content without it running off the top or right edge.
+          const bx = Math.max(W.x1, 10),
+            by = Math.max(W.y1, 10);
+          const cands = [];
+          [1, 10, 100, 1000].forEach((kx) =>
+            [1, 10, 100, 1000].forEach((ky) => cands.push([kx, ky])),
+          );
+          cands.sort((a, b) => a[0] * a[1] - b[0] * b[1]);
+          let first = null;
+          for (const [kx, ky] of cands) {
+            const Wc = { x0: 0, y0: 0, x1: bx * kx, y1: by * ky };
+            const e = importExtents(items, Wc);
+            if (!e) continue;
+            if (!first) first = { W: Wc, ext: e };
+            if (e.x1 < 0.95 * Wc.x1 && e.y1 < 0.95 * Wc.y1) {
+              first = { W: Wc, ext: e };
+              break;
+            }
+          }
+          if (first) ({ W, ext } = first);
+        }
+        if (!ext) throw new Error("Nothing in this graph reaches the positive quadrant (x ≥ 0, y ≥ 0).");
+        const shrink = (lo, hi, c) => (c > lo && c - lo < 0.9 * (hi - lo) ? lo + (c - lo) * 1.08 : hi);
+        let hx = shrink(W.x0, W.x1, ext.x1),
+          hy = shrink(W.y0, W.y1, ext.y1);
+        // Keep what the graph is about (its points, shading and crossings) large: curves
+        // may run on past them, but the axes stop at twice their extent. A tiny feature
+        // near the origin doesn't count, or it would crop everything else away.
+        const feat = importFeatureExtent(items, W);
+        if (feat) {
+          const fx = W.x0 + 2 * (feat.x1 - W.x0),
+            fy = W.y0 + 2 * (feat.y1 - W.y0);
+          if (fx - W.x0 > 0.3 * (hx - W.x0)) hx = Math.min(hx, fx);
+          if (fy - W.y0 > 0.3 * (hy - W.y0)) hy = Math.min(hy, fy);
+        }
+        const xt = importTicks(W.x0, hx);
+        const yt = importTicks(W.y0, hy);
+        return { x0: xt.start, x1: xt.end, y0: yt.start, y1: yt.end, xt: xt, yt: yt };
+      }
+
+      // Grid squares per axis: a multiple of the tick count, so grid lines meet the ticks.
+      function importGridScale(n) {
+        let best = n;
+        [1, 2, 4, 5].forEach((mult) => {
+          const s = n * mult;
+          if (s <= 50 && Math.abs(s - 20) < Math.abs(best - 20)) best = s;
+        });
+        return best;
+      }
+
+      // Douglas–Peucker in screen pixels, so saved graphs stay small.
+      function importSimplify(path, tolPx = 0.3, sx = GW / state.xScale, sy = GH / state.yScale) {
+        if (path.length < 3) return path;
+        const keep = new Uint8Array(path.length);
+        keep[0] = keep[path.length - 1] = 1;
+        const stack = [[0, path.length - 1]];
+        while (stack.length) {
+          const [i0, i1] = stack.pop();
+          const a = path[i0],
+            b = path[i1];
+          let worst = -1,
+            wd = tolPx;
+          for (let k = i0 + 1; k < i1; k++) {
+            const q = path[k];
+            const d = ptSegDist(q.x * sx, q.y * sy, a.x * sx, a.y * sy, b.x * sx, b.y * sy);
+            if (d > wd) {
+              wd = d;
+              worst = k;
+            }
+          }
+          if (worst > 0) {
+            keep[worst] = 1;
+            stack.push([i0, worst], [worst, i1]);
+          }
+        }
+        return path.filter((q, k) => keep[k]);
+      }
+
+      function importApply(parsed) {
+        const items = parsed.items.filter((it) => it.kind !== "point" || (Number.isFinite(it.x) && Number.isFinite(it.y)));
+        if (!items.length) throw new Error("Nothing drawable was found in this graph.");
+        const W = importChooseWindow(parsed.viewport, items);
+        clearCanvas();
+        state.xScale = importGridScale(W.xt.n);
+        state.yScale = importGridScale(W.yt.n);
+        state.scaleLock = null;
+        state.xTicks = { enabled: true, start: W.xt.start, end: W.xt.end, step: W.xt.step };
+        state.yTicks = { enabled: true, start: W.yt.start, end: W.yt.end, step: W.yt.step };
+        state.xLabel = parsed.xLabel || "x";
+        state.yLabel = parsed.yLabel || "y";
+        state.showGrid = parsed.showGrid !== false;
+        const toE = (q) => ({
+          x: ((q.x - W.x0) / (W.x1 - W.x0)) * state.xScale,
+          y: ((q.y - W.y0) / (W.y1 - W.y0)) * state.yScale,
+        });
+        const sx = GW / state.xScale,
+          sy = GH / state.yScale;
+        let count = 0;
+        const pts = [],
+          curves = [],
+          shades = [];
+        items.forEach((it) => {
+          const st = it.style || {};
+          if (it.kind === "region" || it.kind === "polygon") {
+            const polys = importSample(it, W)
+              .map((poly) => importSimplify(poly.map(toE)))
+              .filter((poly) => {
+                // Drop slivers too small to see.
+                const b = plotBounds([poly]);
+                return poly.length >= 3 && ((b.x1 - b.x0) * sx > 2 || (b.y1 - b.y0) * sy > 2);
+              });
+            polys.forEach((poly, k) =>
+              shades.push({
+                id: uid(),
+                type: "shade",
+                poly: poly,
+                color: st.color || "#2d70b3",
+                // Hatch lines are drawn at 2.5× the fill opacity, so a faint GeoGebra
+                // fill would make them nearly invisible; use CruxPlot's hatched default.
+                opacity: st.hatch
+                  ? Math.max(0.4, clampNum(st.fill, 0.05, 0.8, 0.4))
+                  : Math.round(clampNum(st.fill, 0.05, 0.8, 0.3) * 100) / 100,
+                ...(st.hatch ? { hatch: true, hatchStyle: st.hatch } : {}),
+                label: k === 0 ? st.label || "" : "",
+              }),
+            );
+            if (polys.length) count++;
+            return;
+          }
+          if (it.kind === "point") {
+            if (!importInWindow(it, W)) return;
+            const q = toE(it);
+            pts.push({
+              id: uid(),
+              type: "point",
+              ex: q.x,
+              ey: q.y,
+              color: st.color || "#222",
+              size: st.size || 5,
+              label: st.label || "",
+            });
+            count++;
+            return;
+          }
+          const paths = importSample(it, W)
+            .map((path) => importSimplify(path.map(toE)))
+            .filter((path) => path.length > 1);
+          if (!paths.length) return;
+          const common = {
+            color: st.color || "#2d70b3",
+            thickness: st.thickness || 2,
+            dotted: !!st.dashed,
+            label: st.label || "",
+          };
+          if (st.name) common.name = st.name;
+          count++;
+          // Straight lines become ordinary CruxPlot lines so they stay fully editable.
+          const only = paths[0];
+          const a = only[0],
+            b = only[only.length - 1];
+          const straight =
+            paths.length === 1 &&
+            Math.hypot((b.x - a.x) * sx, (b.y - a.y) * sy) > 2 &&
+            only.every((q) => ptSegDist(q.x * sx, q.y * sy, a.x * sx, a.y * sy, b.x * sx, b.y * sy) < 0.5);
+          if (straight) {
+            const p1 = uid(),
+              p2 = uid();
+            curves.push(
+              { id: p1, type: "point", ex: a.x, ey: a.y, color: "#222", size: 5, label: "" },
+              { id: p2, type: "point", ex: b.x, ey: b.y, color: "#222", size: 5, label: "" },
+              { id: uid(), type: "line", p1Id: p1, p2Id: p2, hideHandles: true, ...common },
+            );
+          } else {
+            curves.push({
+              id: uid(),
+              type: "plot",
+              paths: paths,
+              source: it.source || "",
+              importedFrom: parsed.source,
+              ...common,
+            });
+          }
+        });
+        state.elements = shades.concat(curves, pts);
+        importLinkSurplus();
+        clearSelection();
+        render();
+        return count;
+      }
+
+      // Turns imported surplus shading into CruxPlot's own regions. Each shaded area's
+      // outline is compared with the imported curves: consumer surplus lies between a
+      // falling curve (demand) and a flat price, producer surplus between the price and
+      // a rising curve (supply), deadweight loss between demand and supply. Those curves
+      // are named Demand, Supply and Price so Auto Regions can find them, and each area
+      // becomes a live CS/PS/DWL region if CruxPlot's own calculation gives the same shape.
+      function importLinkSurplus() {
+        const tolY = state.yScale * 0.015;
+        const curves = state.elements.filter((e) => e.type === "plot" || e.type === "line");
+        // "down"/"up" only for curves that fall/rise steadily across their whole range,
+        // so a wave or a U-shaped cost curve is never taken for demand or supply.
+        const trend = (e) => {
+          const xr = elemXRangeEcon(e),
+            yr = elemYRangeEcon(e);
+          if (!xr || !yr || xr[1] - xr[0] < 1e-9) return null;
+          if (yr[1] - yr[0] < tolY * 0.5) return "flat";
+          const ys = [];
+          for (let i = 0; i <= 24; i++) {
+            const y = yAtX(e, xr[0] + (xr[1] - xr[0]) * (0.01 + (0.98 * i) / 24));
+            if (y == null) return null;
+            ys.push(y);
+          }
+          const slack = tolY * 0.2;
+          if (ys.every((y, i) => !i || y <= ys[i - 1] + slack)) return "down";
+          if (ys.every((y, i) => !i || y >= ys[i - 1] - slack)) return "up";
+          return null;
+        };
+        // The longest curves first, so a whole demand curve wins over a short
+        // boundary piece of a shaded inequality lying along it.
+        const byLength = (a, b) => {
+          const ra = elemXRangeEcon(a),
+            rb = elemXRangeEcon(b);
+          return rb[1] - rb[0] - (ra[1] - ra[0]);
+        };
+        const downs = curves.filter((c) => trend(c) === "down").sort(byLength),
+          ups = curves.filter((c) => trend(c) === "up").sort(byLength);
+        // Lowest and highest y of a polygon along the vertical line at x.
+        const spanAt = (poly, x) => {
+          let lo = Infinity,
+            hi = -Infinity;
+          poly.forEach((p, k) => {
+            const q = poly[(k + 1) % poly.length];
+            if ((x - p.x) * (x - q.x) > 0 || p.x === q.x) return;
+            const y = p.y + ((q.y - p.y) * (x - p.x)) / (q.x - p.x);
+            lo = Math.min(lo, y);
+            hi = Math.max(hi, y);
+          });
+          return hi >= lo ? [lo, hi] : null;
+        };
+        const found = [];
+        state.elements
+          .filter((e) => e.type === "shade" && e.poly)
+          .forEach((sh) => {
+            const b = plotBounds([sh.poly]);
+            if (b.x1 - b.x0 < 1e-6) return;
+            const xs = Array.from({ length: 16 }, (_, i) => b.x0 + (b.x1 - b.x0) * (0.04 + (0.92 * i) / 15));
+            const spans = xs.map((x) => spanAt(sh.poly, x));
+            const enough = (n) => n >= xs.length * 0.75;
+            // side 0 = lower edge, 1 = upper edge
+            const fits = (c, side) => {
+              let n = 0,
+                err = 0;
+              xs.forEach((x, i) => {
+                const y = yAtX(c, x);
+                if (y == null || !spans[i]) return;
+                n++;
+                err += Math.abs(y - spans[i][side]);
+              });
+              return enough(n) && err / n < tolY;
+            };
+            const level = (side) => {
+              const v = spans.filter(Boolean).map((s) => s[side]);
+              if (!enough(v.length)) return null;
+              const lo = Math.min(...v),
+                hi = Math.max(...v);
+              return hi - lo < tolY ? (lo + hi) / 2 : null;
+            };
+            const D = downs.find((c) => fits(c, 1)),
+              S = ups.find((c) => fits(c, 0));
+            const pBelow = level(0),
+              pAbove = level(1);
+            if (D && pBelow != null) found.push({ sh: sh, type: "cs", D: D, p: pBelow, Q: b.x1 });
+            else if (S && pAbove != null) found.push({ sh: sh, type: "ps", S: S, p: pAbove, Q: b.x1 });
+            else if (D && S) found.push({ sh: sh, type: "dwl", D: D, S: S });
+          });
+        if (!found.length) return;
+        let D = (found.find((f) => f.D) || {}).D,
+          S = (found.find((f) => f.S) || {}).S;
+        if (!S && D) S = ups.find((c) => crossX(D, c) != null);
+        if (!D && S) D = downs.find((c) => crossX(c, S) != null);
+        const restyle = (f) => {
+          const info = REGION_TYPES[f.type];
+          f.sh.color = info.color;
+          f.sh.label = info.label;
+          if (f.sh.hatch) f.sh.hatchStyle = info.hatch;
+        };
+        // Without a demand curve crossing a supply curve this isn't a market diagram,
+        // so the shading stays as it was drawn.
+        if (!D || !S || crossX(D, S) == null) return;
+        // Names picked up from GeoGebra labels (a segment called "d", say) would confuse
+        // Auto Regions, so only the curves identified here keep a market role.
+        const roleWords = new Set(Object.values(ROLE_ALIASES).flat());
+        // A label that is just the source's object name ("g", "f1") becomes D or S.
+        [
+          [D, "D"],
+          [S, "S"],
+        ].forEach(([c, lbl]) => {
+          if (c.label && c.label === c.name) c.label = lbl;
+        });
+        state.elements.forEach((e) => {
+          if (e.name && roleWords.has(roleKey(e.name))) delete e.name;
+        });
+        D.name = "Demand";
+        S.name = "Supply";
+        const Qe = crossX(D, S),
+          Pe = Qe != null ? yAtX(D, Qe) : null;
+        const pf = found.find((f) => f.p != null);
+        if (pf && (Pe == null || Math.abs(pf.p - Pe) > tolY)) {
+          // Surplus measured at a price other than equilibrium (a cartel, a ceiling or a
+          // floor) needs a Price line; reuse a flat imported line at that level if any.
+          let P = curves.find(
+            (c) => c !== D && c !== S && trend(c) === "flat" && Math.abs(elemYRangeEcon(c)[0] - pf.p) < tolY,
+          );
+          if (!P) {
+            const a = uid(),
+              b = uid();
+            const Qmax = Math.max(...found.filter((f) => f.Q != null).map((f) => f.Q));
+            state.elements.push(
+              { id: a, type: "point", ex: 0, ey: pf.p, color: "#222", size: 5, label: "" },
+              { id: b, type: "point", ex: Qmax, ey: pf.p, color: "#222", size: 5, label: "" },
+            );
+            P = { id: uid(), type: "line", p1Id: a, p2Id: b, color: "#888888", thickness: 1.5, dotted: true, hideHandles: true, label: "" };
+            state.elements.push(P);
+          }
+          P.name = "Price";
+        }
+        const area = (poly) =>
+          Math.abs(poly.reduce((s, p, k) => s + p.x * poly[(k + 1) % poly.length].y - poly[(k + 1) % poly.length].x * p.y, 0)) / 2;
+        const sameShape = (a, b) => {
+          const A = area(a),
+            B = area(b),
+            ba = plotBounds([a]),
+            bb = plotBounds([b]);
+          const tx = state.xScale * 0.02,
+            ty = state.yScale * 0.02;
+          return (
+            Math.abs(A - B) <= 0.06 * Math.max(A, B) &&
+            Math.abs(ba.x0 - bb.x0) < tx &&
+            Math.abs(ba.x1 - bb.x1) < tx &&
+            Math.abs(ba.y0 - bb.y0) < ty &&
+            Math.abs(ba.y1 - bb.y1) < ty
+          );
+        };
+        const linked = new Set();
+        found.forEach((f) => {
+          const r = linked.has(f.type) ? null : computeRegion(f.type);
+          if (!r || !r.poly || !sameShape(r.poly, f.sh.poly)) return restyle(f);
+          // A live region: CruxPlot recomputes it from Demand/Supply/Price on every edit.
+          const info = REGION_TYPES[f.type];
+          delete f.sh.poly;
+          delete f.sh.hatchStyle;
+          Object.assign(f.sh, {
+            region: f.type,
+            color: info.color,
+            opacity: f.sh.hatch ? 0.4 : 0.3,
+            label: info.label,
+          });
+          linked.add(f.type);
+        });
+      }
+
+      async function importFromLink(text) {
+        const t = text.trim();
+        if (!t) throw new Error("Paste a Desmos link first, or upload a file.");
+        if (t.startsWith("{")) {
+          let json;
+          try {
+            json = JSON.parse(t);
+          } catch (err) {
+            throw new Error("That text isn't valid Desmos graph data.");
+          }
+          return parseDesmosState(json.state || json);
+        }
+        if (/geogebra\.org/i.test(t))
+          throw new Error("GeoGebra links can't be read directly. In GeoGebra, download the graph as a .ggb file and use Upload File.");
+        const m = t.match(/desmos\.com\/calculator\/([a-z0-9]+)/i) || t.match(/^([a-z0-9]{8,})$/i);
+        if (!m) throw new Error("That doesn't look like a Desmos link (desmos.com/calculator/…).");
+        let res;
+        try {
+          res = await fetch(`https://www.desmos.com/calculator/${m[1]}`, {
+            headers: { Accept: "application/json" },
+          });
+        } catch (err) {
+          throw new Error("Couldn't reach Desmos. Check your internet connection and try again.");
+        }
+        if (res.status === 404)
+          throw new Error("That Desmos graph wasn't found. Use Share → copy link in Desmos, then paste it here.");
+        if (!res.ok) throw new Error(`Desmos returned an error (${res.status}).`);
+        const data = await res.json();
+        return parseDesmosState(data.state);
+      }
+
+      async function importFromFile(file) {
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        if (u8[0] === 0x50 && u8[1] === 0x4b) return parseGeoGebraXML(await ggbReadXML(buf));
+        const text = new TextDecoder().decode(u8);
+        if (/^\s*</.test(text)) return parseGeoGebraXML(text);
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (err) {
+          throw new Error("That file isn't a GeoGebra (.ggb) or Desmos (.json) graph.");
+        }
+        if (Array.isArray(json.elements) && json.xScale !== undefined)
+          throw new Error("That's a CruxPlot save file. Use the Load button to open it.");
+        return parseDesmosState(json.state || json);
+      }
+
+      let importStatusEl = null;
+
+      function importSetStatus(msg, isErr) {
+        if (!importStatusEl) return;
+        importStatusEl.textContent = msg;
+        importStatusEl.classList.toggle("err", !!isErr);
+      }
+
+      function finishImport(parsed) {
+        const count = importApply(parsed);
+        importStatusEl = null;
+        if (!parsed.skipped.length) {
+          closePopup();
+          return;
+        }
+        const ul = document.createElement("ul");
+        ul.className = "pop-list";
+        parsed.skipped.slice(0, 6).forEach((s) => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          ul.appendChild(li);
+        });
+        if (parsed.skipped.length > 6) {
+          const li = document.createElement("li");
+          li.textContent = `…and ${parsed.skipped.length - 6} more`;
+          ul.appendChild(li);
+        }
+        showPopup(
+          "Graph imported",
+          `Imported ${count} item${count === 1 ? "" : "s"} from ${parsed.source}. These couldn't be brought in:`,
+          [{ label: "OK", cls: "primary", fn: closePopup }],
+          ul,
+        );
+      }
+
+      async function runImport(load) {
+        importSetStatus("Importing…", false);
+        try {
+          finishImport(await load());
+        } catch (err) {
+          importSetStatus(err.message || "That graph couldn't be imported.", true);
+        }
+      }
+
+      function showImportGraphMenu() {
+        const body = document.createElement("div");
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "pop-field";
+        input.placeholder = "https://www.desmos.com/calculator/…";
+        input.setAttribute("aria-label", "Desmos link");
+        const hint = document.createElement("p");
+        hint.className = "pop-hint";
+        hint.textContent =
+          "Desmos: Share → copy the link. GeoGebra: download the graph as a .ggb file, then Upload File.";
+        const status = document.createElement("p");
+        status.className = "pop-status";
+        status.setAttribute("role", "status");
+        body.append(input, hint, status);
+        importStatusEl = status;
+        const go = () => runImport(() => importFromLink(input.value));
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") go();
+        });
+        showPopup(
+          "Import Graph",
+          "Bring in a graph from Desmos or GeoGebra. The positive quadrant (x ≥ 0, y ≥ 0) is kept, and the axes and tick labels are rescaled so the curve's shape shows clearly. This replaces the current canvas (Undo brings it back).",
+          [
+            { label: "Import Link", cls: "primary", fn: go },
+            {
+              label: "Upload File…",
+              cls: "secondary",
+              fn: () => document.getElementById("import-graph-input").click(),
+            },
+            {
+              label: "Cancel",
+              cls: "ghost",
+              fn: () => {
+                importStatusEl = null;
+                closePopup();
+              },
+            },
+          ],
+          body,
+        );
+        setTimeout(() => input.focus(), 0);
+      }
+
+      document.getElementById("import-graph-input").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (file) runImport(() => importFromFile(file));
       });
 
       async function doExport(transparent) {
@@ -4538,6 +7197,7 @@
         if (elem.type === "tangent") {
           return `t = ${numFmt(elem.t)}`;
         }
+        if (elem.type === "plot") return elem.source || "";
         return "";
       }
 
@@ -4686,6 +7346,19 @@
           p.className = "no-sel";
           p.textContent = "No equation for this element.";
           secEq.appendChild(p);
+        } else if (sel && sel.type === "plot") {
+          // Imported curves keep their original equation for reference; it isn't editable.
+          const input = document.createElement("math-field");
+          input.id = "equation-input";
+          input.className = "eq-input";
+          input.setAttribute("math-virtual-keyboard-policy", "manual");
+          input.setAttribute("read-only", "");
+          input.value = equationFor(sel);
+          secEq.appendChild(input);
+          const p = document.createElement("p");
+          p.className = "hint-text";
+          p.textContent = `Imported from ${sel.importedFrom || "another graph"}, in the axis-label units.`;
+          secEq.appendChild(p);
         } else if (sel) {
           const input = document.createElement("math-field");
           input.id = "equation-input";
@@ -4797,8 +7470,26 @@
               sel.hatch = hatchCb.checked;
               renderCanvas();
             });
+            hatchCb.addEventListener("change", () => render());
             hatchRow.appendChild(hatchCb);
             secEl.appendChild(hatchRow);
+            if (sel.hatch) {
+              const selStyle = document.createElement("select");
+              selStyle.className = "ctrl-select";
+              Object.entries(HATCH_STYLES).forEach(([k, v]) => {
+                const o = document.createElement("option");
+                o.value = k;
+                o.textContent = v.name;
+                selStyle.appendChild(o);
+              });
+              selStyle.value = hatchStyleOf(sel);
+              selStyle.addEventListener("change", () => {
+                pushUndo();
+                sel.hatchStyle = selStyle.value;
+                renderCanvas();
+              });
+              secEl.appendChild(ctrlRow("Hatch Style", selStyle));
+            }
           }
           if (sel.type !== "shade" && sel.type !== "text") {
             const nameIn = inputTxt(sel.name || "", (v) => {
@@ -5350,52 +8041,87 @@
       function buildRightSidebar() {
         const sb = document.getElementById("right-sidebar");
         const tplSec = sec("Templates");
-        const templates = [
+        const templateGroups = [
           {
-            name: "Supply & Demand",
-            desc: "Market equilibrium",
-            fn: tplSupplyDemand,
+            name: "Markets",
+            templates: [
+              { name: "Supply & Demand", desc: "Market equilibrium", fn: tplSupplyDemand },
+              { name: "Tax Incidence", desc: "Tax wedge, tax revenue & DWL", fn: tplTaxIncidence },
+              { name: "Price Ceiling", desc: "Binding ceiling and shortage", fn: tplPriceCeiling },
+              { name: "Price Floor", desc: "Binding floor and surplus", fn: tplPriceFloor },
+              { name: "Externality", desc: "MSC above MPC, DWL", fn: tplExternality },
+              { name: "Labour Market", desc: "Minimum wage and unemployment", fn: tplLabourMarket },
+            ],
           },
           {
-            name: "PPF",
-            desc: "Production Possibility Frontier",
-            fn: tplPPF,
+            name: "Firms & Consumers",
+            templates: [
+              { name: "PPF", desc: "Production Possibility Frontier", fn: tplPPF },
+              { name: "Indifference Map", desc: "Set of utility curves", fn: tplICMap },
+              { name: "Budget Line", desc: "Budget constraint + IC tangency", fn: tplBudget },
+              { name: "Cost Curves", desc: "MC through min AVC and min ATC", fn: tplCostCurves },
+              {
+                name: "Perfect Competition",
+                desc: "Demand, supply & equilibrium",
+                fn: tplPerfectComp,
+              },
+              { name: "Monopoly", desc: "MR = MC profit maximisation", fn: tplMonopoly },
+              { name: "Cournot", desc: "Reaction functions and Nash equilibrium", fn: tplCournot },
+              { name: "Edgeworth Box", desc: "Endowment, lens & contract curve", fn: tplEdgeworth },
+            ],
           },
           {
-            name: "Indifference Map",
-            desc: "Set of utility curves",
-            fn: tplICMap,
-          },
-          {
-            name: "Budget Line",
-            desc: "Budget constraint + IC tangency",
-            fn: tplBudget,
-          },
-          {
-            name: "Perfect Competition",
-            desc: "Demand, supply & equilibrium",
-            fn: tplPerfectComp,
-          },
-          {
-            name: "Monopoly",
-            desc: "MR = MC profit maximisation",
-            fn: tplMonopoly,
+            name: "Macro",
+            templates: [
+              { name: "AD–AS", desc: "AD, SRAS and LRAS", fn: tplADAS },
+              { name: "IS–LM", desc: "Goods and money market equilibrium", fn: tplISLM },
+              { name: "Keynesian Cross", desc: "AE = Y equilibrium", fn: tplKeynesianCross },
+              { name: "Phillips Curve", desc: "Short- and long-run Phillips curves", fn: tplPhillips },
+              { name: "Lorenz Curve", desc: "Inequality and the Gini coefficient", fn: tplLorenz },
+            ],
           },
         ];
+        let activeGroup = 0;
+        try {
+          const saved = Number(localStorage.getItem("cruxplot-tpl-group"));
+          if (saved >= 0 && saved < templateGroups.length) activeGroup = saved;
+        } catch (err) {}
+        const tplTabs = document.createElement("div");
+        tplTabs.className = "tpl-tabs";
+        tplTabs.setAttribute("role", "tablist");
         const tplGrid = document.createElement("div");
         tplGrid.className = "tpl-grid";
-        templates.forEach((t) => {
-          const btn = document.createElement("button");
-          btn.className = "side-btn tpl-btn";
-          btn.textContent = t.name;
-          btn.onclick = () => {
-            t.fn();
-            setScaleKeepingDrawing(DEFAULT_SCALE, DEFAULT_SCALE);
-            state.scaleLock = 1;
-            render();
-          };
-          tplGrid.appendChild(btn);
+        const showGroup = (gi) => {
+          activeGroup = gi;
+          try {
+            localStorage.setItem("cruxplot-tpl-group", String(gi));
+          } catch (err) {}
+          [...tplTabs.children].forEach((tab, i) => tab.setAttribute("aria-selected", i === gi));
+          tplGrid.replaceChildren();
+          templateGroups[gi].templates.forEach((t) => {
+            const btn = document.createElement("button");
+            btn.className = "side-btn tpl-btn";
+            btn.textContent = t.name;
+            btn.title = t.desc;
+            btn.onclick = () => {
+              t.fn();
+              setScaleKeepingDrawing(DEFAULT_SCALE, DEFAULT_SCALE);
+              state.scaleLock = 1;
+              render();
+            };
+            tplGrid.appendChild(btn);
+          });
+        };
+        templateGroups.forEach((g, gi) => {
+          const tab = document.createElement("button");
+          tab.className = "tpl-tab";
+          tab.setAttribute("role", "tab");
+          tab.textContent = g.name;
+          tab.onclick = () => showGroup(gi);
+          tplTabs.appendChild(tab);
         });
+        showGroup(activeGroup);
+        tplSec.appendChild(tplTabs);
         tplSec.appendChild(tplGrid);
         sb.appendChild(tplSec);
         const roleList = document.createElement("datalist");
@@ -5419,7 +8145,18 @@
           row.className = "region-row";
           const sw = document.createElement("span");
           sw.className = "region-swatch";
-          sw.style.background = info.color + "66";
+          const hst = HATCH_STYLES[info.hatch];
+          const stripe = (a) =>
+            `repeating-linear-gradient(${a}, ${info.color} 0 1.5px, transparent 1.5px 4px)`;
+          if (hst.dots) {
+            sw.style.background = `radial-gradient(circle, ${info.color} 0.9px, transparent 1.2px), ${info.color}22`;
+            sw.style.backgroundSize = "4px 4px, auto";
+          } else {
+            sw.style.background = hst.css
+              ? `${stripe(hst.css)}, ${info.color}22`
+              : `${stripe("45deg")}, ${stripe("-45deg")}, ${info.color}22`;
+          }
+          sw.title = `Hatch: ${HATCH_STYLES[info.hatch].name}`;
           const nm = document.createElement("span");
           nm.className = "region-name";
           nm.textContent = info.name;
@@ -5443,7 +8180,7 @@
         const kIcon = (src, alt, cls) =>
           `<img class="key-icon${cls ? " " + cls : ""}" src="${src}" alt="${alt}">`;
         const KEY_PLUS =
-          '<span class="key-plus" aria-label="plus"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M9 2.5v13M2.5 9h13"/></svg></span>';
+          '<span class="key-plus" aria-label="plus"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>';
         const shortcutRow = (imgs, text) =>
           `<p class="shortcut-row"><span class="key-icon-group">${imgs.join(KEY_PLUS)}</span><span>${text}</span></p>`;
         const SHIFT_ICON =
@@ -5483,7 +8220,9 @@
 
       function tplSupplyDemand() {
         clearCanvas();
-        state.showGrid = false;
+        state.showGrid = true;
+        state.gridColor = "#e0e0e0";
+        state.bgColor = "#ffffff";
         state.xScale = 10;
         state.yScale = 10;
         state.xTicks = {
@@ -5505,7 +8244,7 @@
         push({
           id: d1,
           type: "point",
-          ex: 0.5,
+          ex: 0,
           ey: 9,
           color: "transparent",
           size: 0,
@@ -5514,8 +8253,8 @@
         push({
           id: d2,
           type: "point",
-          ex: 9.5,
-          ey: 1,
+          ex: 9,
+          ey: 0,
           color: "transparent",
           size: 0,
           label: "",
@@ -5525,8 +8264,8 @@
           type: "line",
           p1Id: d1,
           p2Id: d2,
-          color: "#1a1a1a",
-          thickness: 2.5,
+          color: "#29ae4a",
+          thickness: 2,
           dotted: false,
           name: "Demand",
           label: "D₀",
@@ -5538,8 +8277,8 @@
         push({
           id: s1,
           type: "point",
-          ex: 0.5,
-          ey: 1,
+          ex: 0,
+          ey: 0,
           color: "transparent",
           size: 0,
           label: "",
@@ -5547,7 +8286,7 @@
         push({
           id: s2,
           type: "point",
-          ex: 9.5,
+          ex: 9,
           ey: 9,
           color: "transparent",
           size: 0,
@@ -5558,8 +8297,8 @@
           type: "line",
           p1Id: s1,
           p2Id: s2,
-          color: "#1a1a1a",
-          thickness: 2.5,
+          color: "#7800bd",
+          thickness: 2,
           dotted: false,
           name: "Supply",
           label: "S₀",
@@ -5582,9 +8321,9 @@
         push({
           id: ptA,
           type: "point",
-          ex: 2.75,
+          ex: 3,
           ey: 3,
-          color: "#a63a2b",
+          color: "#4400ff",
           size: 6,
           label: "A",
           lox: -4,
@@ -5593,9 +8332,9 @@
         push({
           id: ptB,
           type: "point",
-          ex: 7.25,
+          ex: 6,
           ey: 3,
-          color: "#a63a2b",
+          color: "#4400ff",
           size: 6,
           label: "B",
           lox: 6,
@@ -5606,8 +8345,8 @@
           type: "line",
           p1Id: zero,
           p2Id: ptB,
-          color: "#a63a2b",
-          thickness: 1.5,
+          color: "#ddaf6e",
+          thickness: 2,
           dotted: true,
           label: "",
         });
@@ -5616,7 +8355,7 @@
         push({
           id: q1x,
           type: "point",
-          ex: 2.75,
+          ex: 3,
           ey: 0,
           color: "transparent",
           size: 0,
@@ -5626,7 +8365,7 @@
         push({
           id: q2x,
           type: "point",
-          ex: 7.25,
+          ex: 6,
           ey: 0,
           color: "transparent",
           size: 0,
@@ -5638,8 +8377,8 @@
           type: "line",
           p1Id: q1x,
           p2Id: ptA,
-          color: "#1f3a5f",
-          thickness: 1.5,
+          color: "#daa410",
+          thickness: 2,
           dotted: true,
           label: "",
         });
@@ -5648,8 +8387,8 @@
           type: "line",
           p1Id: q2x,
           p2Id: ptB,
-          color: "#1f3a5f",
-          thickness: 1.5,
+          color: "#daa410",
+          thickness: 2,
           dotted: true,
           label: "",
         });
@@ -5659,17 +8398,17 @@
           ex: 3.4,
           ey: 2.15,
           text: "Market Shortage",
-          color: "#a63a2b",
+          color: "#d41243",
           fontSize: 14,
           label: "",
         });
         push({
           id: uid(),
           type: "text",
-          ex: 4.05,
+          ex: 4,
           ey: 1.55,
           text: "Qd > Qs",
-          color: "#a63a2b",
+          color: "#d41243",
           fontSize: 14,
           label: "",
         });
@@ -6358,6 +9097,452 @@
           label: "",
         });
         state.nextId = 30;
+      }
+
+      // Template kit. Templates are drawn on a 10 x 10 grid and rescaled to the default scale
+      // afterwards. `at: [x, y]` puts a label at that econ position instead of the default spot.
+      const TPL_COLORS = {
+        demand: "#29ae4a",
+        supply: "#7800bd",
+        red: "#d41243",
+        navy: "#1f3a5f",
+        brown: "#ac4c0c",
+        ink: "#1a1a1a",
+        guide: "#8a8a8a",
+      };
+
+      function tplSetup(xLabel, yLabel, showGrid = false) {
+        clearCanvas();
+        state.showGrid = showGrid;
+        state.gridColor = "#e0e0e0";
+        state.bgColor = "#ffffff";
+        state.xScale = 10;
+        state.yScale = 10;
+        state.xTicks = { enabled: false, start: 0, end: 10, step: 1 };
+        state.yTicks = { enabled: false, start: 0, end: 10, step: 1 };
+        state.xLabel = xLabel;
+        state.yLabel = yLabel;
+      }
+
+      function tplLabelAt(elem, anchor, at) {
+        if (!at) return;
+        const p = econToSVG(at[0], at[1]);
+        elem.lox = p.x - anchor.x;
+        elem.loy = p.y - anchor.y;
+      }
+
+      function tplLine(x1, y1, x2, y2, o = {}) {
+        const a = uid(),
+          b = uid();
+        push({ id: a, type: "point", ex: x1, ey: y1, color: "#222", size: 5, label: "" });
+        push({ id: b, type: "point", ex: x2, ey: y2, color: "#222", size: 5, label: "" });
+        const line = {
+          id: uid(),
+          type: "line",
+          p1Id: a,
+          p2Id: b,
+          color: o.color || TPL_COLORS.ink,
+          thickness: o.thickness || 2,
+          dotted: !!o.dotted,
+          hideHandles: true,
+          label: o.label || "",
+        };
+        if (o.name) line.name = o.name;
+        const s1 = econToSVG(x1, y1),
+          s2 = econToSVG(x2, y2);
+        tplLabelAt(line, { x: (s1.x + s2.x) / 2, y: (s1.y + s2.y) / 2 }, o.at);
+        push(line);
+        return line;
+      }
+
+      function tplCurve(props) {
+        const { at, ...rest } = props;
+        const curve = {
+          id: uid(),
+          type: "curve",
+          hideHandles: true,
+          color: TPL_COLORS.ink,
+          thickness: 2,
+          dotted: false,
+          label: "",
+          ...rest,
+        };
+        const mid = qBez(
+          econToSVG(curve.x1, curve.y1),
+          curveCP(curve),
+          econToSVG(curve.x2, curve.y2),
+          0.5,
+        );
+        tplLabelAt(curve, mid, at);
+        push(curve);
+        return curve;
+      }
+
+      // Symmetric U-shaped curve with its minimum at v: y = v.y + k (x - v.x)^2.
+      function tplUCurve(v, halfWidth, k, props) {
+        const h = k * halfWidth * halfWidth;
+        return tplCurve({
+          shape: "parabola",
+          x1: v.x - halfWidth,
+          y1: v.y + h,
+          x2: v.x + halfWidth,
+          y2: v.y + h,
+          cpx: v.x,
+          cpy: v.y - h,
+          ...props,
+        });
+      }
+
+      // Where A crosses B (preferring the crossing where A falls below B).
+      function tplCross(A, B) {
+        const x = crossX(A, B);
+        return { x: x, y: yAtX(A, x) };
+      }
+
+      function tplDot(x, y, o = {}) {
+        const pt = {
+          id: uid(),
+          type: "point",
+          ex: x,
+          ey: y,
+          color: o.color || TPL_COLORS.ink,
+          size: 5,
+          label: o.label || "",
+        };
+        if (o.guides !== false) {
+          pt.guides = true;
+          pt.guideColor = TPL_COLORS.guide;
+        }
+        tplLabelAt(pt, econToSVG(x, y), o.at);
+        push(pt);
+        return pt;
+      }
+
+      // Label at the foot of a guide, e.g. P* on the y-axis or Q* on the x-axis.
+      function tplAxisMark(axis, v, label) {
+        push({
+          id: uid(),
+          type: "point",
+          ex: axis === "x" ? v : 0,
+          ey: axis === "x" ? 0 : v,
+          color: "transparent",
+          size: 0,
+          label: label,
+          labelColor: TPL_COLORS.ink,
+        });
+      }
+
+      function tplText(x, y, text, color = TPL_COLORS.ink, fontSize = 14) {
+        push({ id: uid(), type: "text", ex: x, ey: y, text, color, fontSize, label: "" });
+      }
+
+      // Auto region (see REGION_TYPES); its outline follows the named curves.
+      function tplRegion(type, at) {
+        const info = REGION_TYPES[type];
+        const shade = {
+          id: uid(),
+          type: "shade",
+          region: type,
+          color: info.color,
+          opacity: 0.3,
+          hatch: false,
+          label: info.label,
+        };
+        tplShade(shade, at);
+      }
+
+      // Push a shade; `at` moves its label off the default spot (the outline's centroid).
+      function tplShade(shade, at) {
+        const poly = computeShadePolygonEcon(shade);
+        if (at && poly) {
+          const pts = poly.map((p) => econToSVG(p.x, p.y));
+          const anchor = {
+            x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
+            y: pts.reduce((s, p) => s + p.y, 0) / pts.length,
+          };
+          tplLabelAt(shade, anchor, at);
+        }
+        push(shade);
+      }
+
+      function tplTaxIncidence() {
+        tplSetup("Quantity", "Price ($)");
+        const C = TPL_COLORS;
+        const D = tplLine(0, 9, 9, 0, { color: C.demand, name: "Demand", label: "D", at: [8.3, 1.5] });
+        const S = tplLine(0, 1, 8.5, 9.5, { color: C.supply, name: "Supply", label: "S", at: [8.8, 9.1] });
+        const T = tplLine(0, 3, 6.5, 9.5, {
+          color: C.red,
+          name: "Supply + tax",
+          label: "S + tax",
+          at: [5.6, 9.4],
+        });
+        tplRegion("cs");
+        tplRegion("ps");
+        tplRegion("tax", [1.0, 5.45]);
+        tplRegion("dwl", [3.42, 4.72]);
+        const e0 = tplCross(D, S),
+          e1 = tplCross(D, T),
+          pp = yAtX(S, e1.x);
+        tplDot(e0.x, e0.y);
+        tplDot(e1.x, e1.y);
+        tplDot(e1.x, pp);
+        tplAxisMark("y", e1.y, "P₁");
+        tplAxisMark("y", e0.y, "P₀");
+        tplAxisMark("y", pp, "P₂");
+        tplAxisMark("x", e1.x, "Q₁");
+        tplAxisMark("x", e0.x, "Q₀");
+        tplText(6.2, 6.6, "P₁ = price buyers pay", C.ink, 12);
+        tplText(6.2, 6.0, "P₂ = price sellers receive", C.ink, 12);
+      }
+
+      function tplPriceControl(level, kind) {
+        tplSetup("Quantity", "Price ($)");
+        const C = TPL_COLORS;
+        const D = tplLine(0, 9, 9, 0, { color: C.demand, name: "Demand", label: "D", at: [8.3, 1.5] });
+        const S = tplLine(0, 1, 8.5, 9.5, { color: C.supply, name: "Supply", label: "S", at: [8.8, 9.1] });
+        tplLine(0, level, 9.5, level, {
+          color: C.red,
+          name: kind,
+          label: kind,
+          at: [7.3, level + 0.25],
+        });
+        tplRegion("cs");
+        tplRegion("ps");
+        tplRegion("dwl", [2.7, 4.35]);
+        const e0 = tplCross(D, S),
+          qd = xAtY(D, level),
+          qs = xAtY(S, level);
+        tplDot(e0.x, e0.y, { color: C.guide });
+        tplDot(qs, level);
+        tplDot(qd, level);
+        tplAxisMark("y", e0.y, "P*");
+        tplAxisMark("x", e0.x, "Q*");
+        tplAxisMark("x", qs, "Qˢ");
+        tplAxisMark("x", qd, "Qᵈ");
+        const gap = kind === "Price ceiling" ? "Shortage" : "Surplus";
+        tplText(e0.x + 0.3, level + (kind === "Price ceiling" ? -0.55 : 0.3), gap, C.red, 13);
+      }
+
+      function tplPriceCeiling() {
+        tplPriceControl(3, "Price ceiling");
+      }
+
+      function tplPriceFloor() {
+        tplPriceControl(7, "Price floor");
+      }
+
+      function tplExternality() {
+        tplSetup("Quantity", "Price / cost ($)");
+        const C = TPL_COLORS;
+        const D = tplLine(0, 9, 9, 0, { color: C.demand, label: "D = MSB", at: [7.6, 1.6] });
+        const S = tplLine(0, 1, 8.5, 9.5, { color: C.supply, label: "S = MPC", at: [8.75, 9.0] });
+        const MSC = tplLine(0, 3, 6.5, 9.5, { color: C.red, label: "MSC", at: [6.7, 9.3] });
+        const opt = tplCross(D, MSC),
+          mkt = tplCross(D, S);
+        const optDot = tplDot(opt.x, opt.y, { label: "Social optimum", at: [opt.x - 0.95, opt.y + 1.05] });
+        const mktDot = tplDot(mkt.x, mkt.y, { label: "Market", at: [mkt.x + 0.3, mkt.y - 0.45] });
+        push({
+          id: uid(),
+          type: "shade",
+          boundA: MSC.id,
+          boundB: D.id,
+          xClip: [optDot.id, mktDot.id],
+          color: REGION_TYPES.dwl.color,
+          opacity: 0.35,
+          label: "DWL",
+          lox: 6,
+          loy: 0,
+        });
+        tplAxisMark("y", opt.y, "P*");
+        tplAxisMark("y", mkt.y, "Pₘ");
+        tplAxisMark("x", opt.x, "Q*");
+        tplAxisMark("x", mkt.x, "Qₘ");
+      }
+
+      function tplLabourMarket() {
+        tplSetup("Quantity of labour", "Wage rate ($)");
+        const C = TPL_COLORS;
+        const D = tplLine(0, 9, 10, 1.5, { color: C.demand, label: "Dₗ", at: [9.3, 2.4] });
+        const S = tplLine(0, 2, 7.5, 9.5, { color: C.supply, label: "Sₗ", at: [7.7, 9.4] });
+        const wMin = 7.5;
+        tplLine(0, wMin, 9.5, wMin, { color: C.red, label: "Minimum wage", at: [6.9, wMin + 0.25] });
+        const e = tplCross(D, S),
+          ld = xAtY(D, wMin),
+          ls = xAtY(S, wMin);
+        tplDot(e.x, e.y, { color: C.guide });
+        tplDot(ld, wMin);
+        tplDot(ls, wMin);
+        tplAxisMark("y", e.y, "W*");
+        tplAxisMark("x", e.x, "L*");
+        tplAxisMark("x", ld, "Lᵈ");
+        tplAxisMark("x", ls, "Lˢ");
+        tplText(ld + 0.3, wMin + 0.55, "Unemployment", C.red, 13);
+      }
+
+      function tplCostCurves() {
+        tplSetup("Output (Q)", "Cost ($)");
+        const C = TPL_COLORS;
+        // MC is drawn first; AVC and ATC are built with their minima on it, so MC cuts
+        // both at their lowest points. Equal curvature makes the gap (AFC) shrink with Q.
+        const mc = tplCurve({
+          x1: 0.9,
+          y1: 2.9,
+          x2: 7.2,
+          y2: 9.8,
+          cpx: 2.4,
+          cpy: -0.6,
+          color: C.red,
+          name: "MC",
+          label: "MC",
+          at: [7.4, 9.4],
+        });
+        const vA = qBezEcon(mc, 0.43),
+          vT = qBezEcon(mc, 0.64);
+        tplUCurve(vA, 2.2, 0.16, { color: C.navy, label: "AVC", at: [vA.x + 2.3, vA.y + 0.65] });
+        tplUCurve(vT, 3.6, 0.16, {
+          color: C.demand,
+          name: "ATC",
+          label: "ATC",
+          at: [vT.x + 3.7, vT.y + 2.1],
+        });
+        tplDot(vA.x, vA.y, { guides: false, label: "min AVC", at: [vA.x + 0.2, vA.y - 0.55] });
+        tplDot(vT.x, vT.y, { guides: false, label: "min ATC", at: [vT.x + 0.25, vT.y - 0.5] });
+      }
+
+      function tplCournot() {
+        tplSetup("Firm 1 output (q₁)", "Firm 2 output (q₂)");
+        const C = TPL_COLORS;
+        const R1 = tplLine(0, 9, 4.5, 0, { color: C.navy, label: "R₁ (Firm 1)", at: [0.35, 9.1] });
+        const R2 = tplLine(0, 4.5, 9, 0, { color: C.red, label: "R₂ (Firm 2)", at: [7.4, 1.0] });
+        const n = tplCross(R1, R2);
+        tplDot(n.x, n.y, { label: "Nash equilibrium", at: [n.x + 0.3, n.y + 0.35] });
+        tplAxisMark("x", n.x, "q₁*");
+        tplAxisMark("y", n.y, "q₂*");
+      }
+
+      function tplEdgeworth() {
+        tplSetup("Good X (Person A)", "Good Y (Person A)");
+        const C = TPL_COLORS;
+        // Box of 9 x 9: A's origin is bottom-left, B's is top-right. Each A/B pair is
+        // symmetric about the diagonal, so the tangent pair touch on the contract curve.
+        tplLine(0, 9, 9, 9, { color: "#46525f", thickness: 1.5 });
+        tplLine(9, 0, 9, 9, { color: "#46525f", thickness: 1.5 });
+        tplLine(0, 0, 9, 9, {
+          color: C.guide,
+          dotted: true,
+          label: "Contract curve",
+          at: [6.9, 6.5],
+        });
+        const ic = (a, b, c, color, label, at) =>
+          tplCurve({ x1: a, y1: b, x2: b, y2: a, cpx: c, cpy: c, color, label, at });
+        const A1 = ic(0.8, 8.6, 2.6, C.navy, "A₁", [8.45, 1.2]);
+        ic(1.6, 9, 3.1, C.navy, "A₂", [8.75, 2.05]);
+        const B1 = ic(0.3, 6.3, 6.2, C.red, "B₁", [6.35, 0.45]);
+        ic(0, 5.8, 5.5, C.red, "B₂", [5.4, 0.3]);
+        const e = tplCross(A1, B1);
+        tplDot(e.x, e.y, { guides: false, label: "E", at: [e.x - 0.45, e.y + 0.35] });
+        tplDot(4.2, 4.2, { guides: false, label: "P", at: [4.5, 4.35] });
+        tplText(0.6, 0.15, "Person A", C.navy, 13);
+        tplText(7.3, 8.55, "Person B", C.red, 13);
+        tplText(0.2, 9.35, "E = endowment  ·  P = Pareto-efficient allocation", C.ink, 12);
+      }
+
+      function tplADAS() {
+        tplSetup("Real GDP", "Price level");
+        const C = TPL_COLORS;
+        const AD = tplLine(0.5, 9, 9, 0.5, { color: C.demand, label: "AD", at: [8.6, 1.3] });
+        const AS = tplLine(0.5, 0.5, 9, 9, { color: C.supply, label: "SRAS", at: [8.2, 9.2] });
+        const e = tplCross(AD, AS);
+        tplLine(e.x, 0, e.x, 9.5, { color: C.red, label: "LRAS", at: [e.x + 0.2, 9.2] });
+        tplDot(e.x, e.y, { label: "E", at: [e.x + 0.45, e.y - 0.1] });
+        tplAxisMark("y", e.y, "P*");
+        tplAxisMark("x", e.x, "Y*");
+      }
+
+      function tplISLM() {
+        tplSetup("Output (Y)", "Interest rate (r)");
+        const C = TPL_COLORS;
+        const IS = tplLine(0.8, 9, 9, 1.5, { color: C.navy, label: "IS", at: [9.1, 1.7] });
+        const LM = tplLine(0.8, 1.5, 9, 9, { color: C.red, label: "LM", at: [9.1, 8.8] });
+        const e = tplCross(IS, LM);
+        tplDot(e.x, e.y, { label: "E", at: [e.x + 0.45, e.y - 0.1] });
+        tplAxisMark("y", e.y, "r*");
+        tplAxisMark("x", e.x, "Y*");
+      }
+
+      function tplKeynesianCross() {
+        tplSetup("Real GDP / income (Y)", "Planned expenditure (AE)");
+        const C = TPL_COLORS;
+        const diag = tplLine(0, 0, 9.5, 9.5, { color: C.ink, label: "AE = Y", at: [8.4, 9.4] });
+        const AE = tplLine(0, 2.5, 9.5, 8.2, { color: C.demand, label: "AE = C + I + G", at: [7.4, 6.55] });
+        const e = tplCross(AE, diag);
+        tplDot(e.x, e.y, { label: "E", at: [e.x - 0.45, e.y + 0.3] });
+        tplAxisMark("x", e.x, "Y*");
+        tplText(0.9, 0.35, "45°", C.ink, 12);
+      }
+
+      function tplPhillips() {
+        tplSetup("Unemployment rate (%)", "Inflation rate (%)");
+        const C = TPL_COLORS;
+        const sr0 = tplCurve({
+          shape: "convex",
+          x1: 0.8,
+          y1: 7.5,
+          x2: 9,
+          y2: 0.8,
+          curvature: 0.75,
+          color: C.navy,
+          label: "SRPC₁",
+          at: [9.1, 1.0],
+        });
+        const sr1 = tplCurve({
+          shape: "convex",
+          x1: 0.8,
+          y1: 9.5,
+          x2: 9,
+          y2: 2.8,
+          curvature: 0.75,
+          color: C.navy,
+          dotted: true,
+          label: "SRPC₂",
+          at: [9.1, 3.0],
+        });
+        const un = 4.5;
+        tplLine(un, 0, un, 9.5, { color: C.red, label: "LRPC", at: [un + 0.2, 9.4] });
+        const y0 = yAtX(sr0, un),
+          y1 = yAtX(sr1, un);
+        tplDot(un, y0, { label: "A", at: [un + 0.25, y0 + 0.3] });
+        tplDot(un, y1, { label: "B", at: [un + 0.25, y1 + 0.3] });
+        tplAxisMark("x", un, "uₙ");
+        tplAxisMark("y", y0, "π₁");
+        tplAxisMark("y", y1, "π₂");
+      }
+
+      function tplLorenz() {
+        tplSetup("Cumulative % of population", "Cumulative % of income");
+        const C = TPL_COLORS;
+        const eq = tplLine(0, 0, 9, 9, { color: C.ink, label: "Line of equality", at: [3.3, 3.55] });
+        eq.labelRotation = -45;
+        tplLine(9, 0, 9, 9, { color: C.guide, thickness: 1.2, dotted: true });
+        const lz = tplCurve({
+          shape: "increasing-convex",
+          x1: 0,
+          y1: 0,
+          x2: 9,
+          y2: 9,
+          curvature: 0.8,
+          color: C.red,
+          label: "Lorenz curve",
+          at: [6.7, 2.2],
+        });
+        tplShade({ id: uid(), type: "shade", boundA: eq.id, boundB: lz.id, color: "#3b82f6", opacity: 0.25, label: "A" });
+        tplShade(
+          { id: uid(), type: "shade", boundA: lz.id, boundB: "xaxis", color: "#22a35a", opacity: 0.2, label: "B" },
+          [5.6, 1.0],
+        );
+        tplAxisMark("x", 9, "100%");
+        tplAxisMark("y", 9, "100%");
+        tplText(0.5, 8.3, "Gini = A ÷ (A + B)", C.ink, 14);
       }
 
       function push(o) {
